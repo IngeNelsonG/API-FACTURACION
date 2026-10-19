@@ -3,8 +3,27 @@
 API propia para **crear, firmar, transmitir y consultar facturas electrónicas de venta** (y sus notas crédito/débito) conectándose directamente a los **servicios web de la DIAN** bajo el modelo de **validación previa**, en modo de operación **Software Propio**.
 
 > [!NOTE]
-> Este repositorio está en **fase de investigación y estructura**. Todavía no se ha elegido tecnología.
-> La investigación se hizo con búsqueda web respaldada por Google/Gemini y fuentes de la DIAN. **Antes de implementar, verificar cada dato contra el Anexo Técnico vigente.**
+> **Estado:** API funcional en modo **simulado** (sin credenciales DIAN) y lista para el ambiente de
+> **habilitación** al configurar certificado, SoftwareID, PIN y TestSetId
+> ([guía](docs/03-habilitacion/guia-habilitacion.md)). El ambiente de producción no está soportado a propósito.
+
+## Inicio rápido
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env                       # cambie JWT_SECRETO
+python -m facturacion.cli crear-admin --email admin@example.com --nombre "Admin"
+uvicorn facturacion.asgi:app --reload      # Swagger en http://localhost:8000/docs
+pytest --cov                               # pruebas
+```
+
+Funcionalidades: login JWT con contraseñas **Argon2id**, emisión de factura (UBL 2.1 + CUFE +
+firma XAdES-EPES + envío SOAP a la DIAN), descarga de **PDF** y **XML**, **QR** con la evidencia de
+la factura y URL de verificación, y **envío por correo** al adquiriente.
+
+Stack: Python 3.12, FastAPI, SQLAlchemy/Alembic, lxml + signxml, httpx, reportlab, segno.
+Documentación técnica en [`docs/`](docs/README.md); contexto para agentes de IA en [`.agents/`](.agents/README.md).
 
 ---
 
@@ -143,19 +162,11 @@ CUFE = SHA384( NumFac + FecFac + HorFac + ValFac
 
 ---
 
-## 7. Contrato propuesto de la API propia (independiente de tecnología)
+## 7. Contrato de la API
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/facturas` | Crea, firma y envía una factura a la DIAN. |
-| `GET` | `/facturas/{cufe}` | Estado y datos de la factura. |
-| `GET` | `/facturas/{cufe}/xml` | XML firmado / `AttachedDocument`. |
-| `GET` | `/facturas/{cufe}/pdf` | Representación gráfica. |
-| `POST` | `/notas-credito` | Crea y envía una nota crédito. |
-| `POST` | `/notas-debito` | Crea y envía una nota débito. |
-| `GET` | `/numeracion` | Rangos autorizados (`GetNumberingRange`). |
-| `POST` | `/habilitacion/set-pruebas` | Ejecuta el set de pruebas (`SendTestSetAsync`). |
-| `GET` | `/habilitacion/estado/{trackId}` | Consulta un envío (`GetStatusZip`). |
+Ver [docs/06-contrato-api/endpoints.md](docs/06-contrato-api/endpoints.md). Resumen:
+`POST /api/v1/auth/login`, `POST /api/v1/facturas`, `GET /api/v1/facturas/{id}/pdf|xml|qr`,
+`POST /api/v1/facturas/{id}/correo`, `GET /api/v1/verificacion/{cufe}` (público, destino del QR).
 
 ---
 
@@ -163,50 +174,38 @@ CUFE = SHA384( NumFac + FecFac + HorFac + ValFac
 
 ```
 API-FACTURACION/
-├── docs/
-│   ├── 01-normativa/            Resoluciones, decretos, conceptos DIAN
-│   ├── 02-anexo-tecnico/        Anexo Técnico v1.9 y notas de campos UBL
-│   ├── 03-habilitacion/         Pasos, evidencias y resultados del set de pruebas
-│   ├── 04-arquitectura/         Diagramas y decisiones de diseño
-│   ├── 05-servicios-web-dian/   WSDL, ejemplos de peticiones/respuestas SOAP
-│   └── 06-contrato-api/         Especificación de la API propia
-├── src/
-│   ├── api/                     Endpoints expuestos a los clientes
-│   ├── dominio/                 Factura, notas, emisor, adquiriente, impuestos
-│   ├── generacion-xml/          Construcción de UBL 2.1 + extensiones DIAN
-│   ├── cufe-cude/               Cálculo de CUFE, CUDE y SoftwareSecurityCode
-│   ├── firma-digital/           Firma XAdES-EPES
-│   ├── empaquetado/             ZIP + Base64
-│   ├── cliente-dian/            Cliente SOAP 1.2 con WS-Security
-│   ├── respuestas-dian/         ApplicationResponse y AttachedDocument
-│   ├── representacion-grafica/  PDF + código QR
-│   └── configuracion/           Ambientes, endpoints, credenciales
-├── recursos/
-│   ├── xsd/                     Esquemas UBL 2.1 / DIAN
-│   ├── listas-de-valores/       Catálogos del anexo técnico
-│   ├── ejemplos-xml/            XML de referencia
-│   └── politica-de-firma/       Política de Firma v2
-├── certificados/                Certificado .p12 (ignorado por git)
-├── tests/
-│   ├── unitarias/
-│   ├── integracion/
-│   └── set-de-pruebas-dian/
-└── scripts/                     Utilidades (habilitación, consultas)
+├── .agents/                 Contexto persistente para agentes de IA
+├── .github/workflows/       CI: lint, tests, migraciones, pip-audit
+├── docs/                    Arquitectura, ADRs, seguridad, contrato API, habilitación
+├── migraciones/             Alembic
+├── src/facturacion/
+│   ├── api/                 Rutas FastAPI, esquemas, errores, middleware
+│   ├── dominio/             Factura, totales, CUFE, contenido del QR
+│   ├── ubl/                 XML UBL 2.1 + extensiones DIAN, ZIP
+│   ├── firma/               XAdES-EPES (Política de Firma v2)
+│   ├── dian/                Cliente SOAP 1.2 + WS-Security y cliente simulado
+│   ├── representacion/      PDF y QR
+│   ├── correo/              SMTP y simulado
+│   ├── persistencia/        Modelos y repositorios SQLAlchemy
+│   ├── seguridad/           Argon2id, JWT, limitador de intentos
+│   ├── servicios/           Caso de uso de emisión
+│   ├── arranque.py          Composición de adaptadores
+│   └── cli.py               crear-admin
+├── recursos/                XSD, listas de valores, política de firma (por descargar)
+├── certificados/            Certificado .p12 (ignorado por git)
+└── tests/                   unitarias/ e integracion/
 ```
 
 ---
 
 ## 9. Hoja de ruta
 
-1. **Documentación:** descargar Anexo 1.9, XSD, listas de valores y Política de Firma v2 a `docs/` y `recursos/`.
-2. **Elegir tecnología** (la que tenga buen soporte para XML-DSig/XAdES y SOAP con WS-Security).
-3. **CUFE/CUDE** con pruebas unitarias usando ejemplos del anexo.
-4. **Generación XML** y validación contra XSD.
-5. **Firma XAdES-EPES** y verificación local.
-6. **Cliente SOAP** contra habilitación (`GetNumberingRange` primero como prueba de conexión).
-7. **Set de pruebas** completo → estado Habilitado.
-8. **API REST**, representación gráfica, envío al adquiriente.
-9. **Producción**: resolución real, monitoreo, reintentos y almacenamiento.
+1. ✅ CUFE (verificado con el ejemplo del Anexo), XML UBL, firma XAdES-EPES, cliente SOAP.
+2. ✅ API REST con JWT, PDF + QR, correo, verificación pública.
+3. ⬜ Descargar Anexo 1.9, XSD y listas de valores; validar el XML contra los XSD.
+4. ⬜ Conectar a habilitación con credenciales reales y superar el set de pruebas.
+5. ⬜ Notas crédito/débito (CUDE), `AttachedDocument`, eventos RADIAN.
+6. ⬜ Producción (nuevo ADR): resolución real, monitoreo, reintentos programados.
 
 ---
 
