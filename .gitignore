@@ -1,0 +1,11 @@
+# Certificados digitales y llaves: NUNCA versionar
+certificados/*
+!certificados/.gitkeep
+*.p12
+*.pfx
+*.pem
+*.key
+
+# Secretos / variables de entorno
+.env
+.env.*
