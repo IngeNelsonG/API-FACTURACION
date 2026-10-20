@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Facturación Electrónica</title>
+  <link rel="icon" href="/app/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app/css/estilos.css">
+  <script type="module" src="/app/js/app.js"></script>
+</head>
+<body>
+  <div class="banner-pruebas" role="note">
+    <strong>Ambiente de pruebas</strong> — sin validez tributaria
+  </div>
+
+  <header class="barra" id="barra" hidden>
+    <div class="barra__contenido">
+      <a class="marca" href="#/facturas">
+        <img class="marca__logo" src="/app/img/logo.svg" alt="" width="32" height="32">
+        <span class="marca__nombre">Facturación Electrónica</span>
+      </a>
+      <nav class="navegacion" aria-label="Principal">
+        <a class="navegacion__enlace" href="#/facturas" data-ruta="facturas">Facturas</a>
+        <a class="navegacion__enlace" href="#/facturas/nueva" data-ruta="nueva">Nueva factura</a>
+        <a class="navegacion__enlace" href="#/usuarios" data-ruta="usuarios" id="enlace-usuarios" hidden>Usuarios</a>
+      </nav>
+      <div class="usuario">
+        <div class="usuario__datos">
+          <span class="usuario__nombre" id="usuario-nombre"></span>
+          <span class="usuario__rol" id="usuario-rol"></span>
+        </div>
+        <button type="button" class="boton boton--fantasma boton--pequeno" id="boton-salir">Cerrar sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="principal" id="principal" tabindex="-1">
+    <p class="cargando-pagina">Cargando…</p>
+  </main>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite" aria-relevant="additions"></div>
+
+  <noscript><p class="noscript">Esta aplicación requiere JavaScript.</p></noscript>
+</body>
+</html>

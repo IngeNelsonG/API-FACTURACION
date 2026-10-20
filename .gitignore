@@ -9,3 +9,19 @@ certificados/*
 # Secretos / variables de entorno
 .env
 .env.*
+!.env.example
+
+# Python / datos locales
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+var/
+*.db
