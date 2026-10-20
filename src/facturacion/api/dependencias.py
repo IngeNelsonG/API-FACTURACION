@@ -25,6 +25,8 @@ class Contenedor:
     fabrica_sesiones: sessionmaker[Session]
     facturacion: ServicioFacturacion
     limitador_login: LimitadorIntentos
+    # Límite por IP sin importar el correo: frena el rociado de contraseñas.
+    limitador_login_ip: LimitadorIntentos
 
 
 def obtener_contenedor(request: Request) -> Contenedor:

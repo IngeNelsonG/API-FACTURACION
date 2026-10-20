@@ -33,9 +33,11 @@ def iniciar_sesion(
     sesion: SesionDep,
 ) -> TokenRespuesta:
     email = formulario.username.strip().lower()[:254]
-    clave_limite = f"{_ip_cliente(request)}|{email}"
+    ip = _ip_cliente(request)
+    clave_limite = f"{ip}|{email}"
     limitador = contenedor.limitador_login
-    if limitador.bloqueado(clave_limite):
+    limitador_ip = contenedor.limitador_login_ip
+    if limitador.bloqueado(clave_limite) or limitador_ip.bloqueado(ip):
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "Demasiados intentos fallidos. Intente más tarde.",
@@ -47,7 +49,8 @@ def iniciar_sesion(
     valido = contrasenas.verificar(usuario.hash_contrasena if usuario else None, contrasena)
     if not valido or usuario is None or not usuario.activo:
         limitador.registrar_fallo(clave_limite)
-        registro_log.warning("login_fallido", extra={"ip": _ip_cliente(request)})
+        limitador_ip.registrar_fallo(ip)
+        registro_log.warning("login_fallido", extra={"ip": ip})
         # Mensaje único: no revelar si el correo existe.
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,

@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 TAMANO_MAXIMO_CUERPO = 1024 * 1024  # 1 MiB
 RUTAS_DOCUMENTACION = ("/docs", "/redoc", "/openapi.json")
@@ -30,19 +31,80 @@ def _es_ruta_web(ruta: str) -> bool:
     return ruta == "/app" or ruta.startswith(("/app/", "/verificar/"))
 
 
+class _CuerpoDemasiadoGrande(Exception):
+    pass
+
+
+class LimiteCuerpo:
+    """Corta en 413 las peticiones cuyo cuerpo supera ``TAMANO_MAXIMO_CUERPO``.
+
+    Revisa ``Content-Length`` y además cuenta los bytes recibidos, porque una petición
+    con ``Transfer-Encoding: chunked`` no declara su tamaño.
+    """
+
+    def __init__(self, app: ASGIApp, maximo: int = TAMANO_MAXIMO_CUERPO) -> None:
+        self._app = app
+        self._maximo = maximo
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self._app(scope, receive, send)
+            return
+        cabeceras = dict(scope["headers"])
+        longitud = cabeceras.get(b"content-length")
+        if longitud is not None and (not longitud.isdigit() or int(longitud) > self._maximo):
+            await self._rechazar(scope, receive, send)
+            return
+
+        recibidos = 0
+        excedido = False
+        respuesta_iniciada = False
+
+        async def recibir_limitado() -> Message:
+            nonlocal recibidos, excedido
+            mensaje = await receive()
+            if mensaje["type"] == "http.request":
+                recibidos += len(mensaje.get("body", b""))
+                if recibidos > self._maximo:
+                    excedido = True
+                    raise _CuerpoDemasiadoGrande
+            return mensaje
+
+        async def enviar(mensaje: Message) -> None:
+            nonlocal respuesta_iniciada
+            if excedido:
+                # FastAPI convierte cualquier error al leer el cuerpo en un 400: se
+                # descarta esa respuesta y se envía el 413 en su lugar.
+                if not respuesta_iniciada:
+                    respuesta_iniciada = True
+                    await self._rechazar(scope, receive, send)
+                return
+            respuesta_iniciada = respuesta_iniciada or mensaje["type"] == "http.response.start"
+            await send(mensaje)
+
+        try:
+            await self._app(scope, recibir_limitado, enviar)
+        except _CuerpoDemasiadoGrande:
+            if not respuesta_iniciada:
+                await self._rechazar(scope, receive, send)
+
+    @staticmethod
+    async def _rechazar(scope: Scope, receive: Receive, send: Send) -> None:
+        respuesta = JSONResponse(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            content={"detalle": "El cuerpo de la petición es demasiado grande"},
+        )
+        await respuesta(scope, receive, send)
+
+
 def registrar_middleware(app: FastAPI, *, hsts: bool) -> None:
+    # Se registra primero para quedar por dentro: su 413 también recibe las cabeceras.
+    app.add_middleware(LimiteCuerpo)
+
     @app.middleware("http")
     async def _seguridad(
         request: Request, siguiente: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        longitud = request.headers.get("content-length")
-        if longitud is not None and (
-            not longitud.isdigit() or int(longitud) > TAMANO_MAXIMO_CUERPO
-        ):
-            return JSONResponse(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                content={"detalle": "El cuerpo de la petición es demasiado grande"},
-            )
         respuesta = await siguiente(request)
         respuesta.headers.update(_CABECERAS)
         ruta = request.url.path

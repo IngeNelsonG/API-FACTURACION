@@ -107,4 +107,7 @@ def construir_contenedor(config: Configuracion) -> Contenedor:
         fabrica_sesiones=crear_fabrica_sesiones(motor),
         facturacion=servicio,
         limitador_login=LimitadorIntentos(config.login_max_intentos, config.login_ventana_segundos),
+        limitador_login_ip=LimitadorIntentos(
+            config.login_max_intentos_ip, config.login_ventana_segundos
+        ),
     )

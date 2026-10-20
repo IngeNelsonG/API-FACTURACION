@@ -103,7 +103,7 @@ export function renderizarNuevaFactura(principal, { navegar }) {
       codigo: campo({ etiqueta: 'Código', nombre: 'codigo', atributos: { maxlength: '50', spellcheck: 'false' }, clase: 'linea__codigo' }),
       cantidad: campo({ etiqueta: 'Cantidad', nombre: 'cantidad', requerido: true, valor: '1', atributos: { inputmode: 'decimal', maxlength: '22' }, clase: 'linea__cantidad' }),
       precio_unitario: campo({ etiqueta: 'Precio unitario', nombre: 'precio_unitario', requerido: true, atributos: { inputmode: 'decimal', maxlength: '16', placeholder: '0.00' }, clase: 'linea__precio' }),
-      porcentaje_iva: campo({ etiqueta: 'IVA', nombre: 'porcentaje_iva', control: 'select', opciones: [['19', '19 %'], ['5', '5 %'], ['0', '0 % (excluido)']], valor: '19', clase: 'linea__iva' }),
+      porcentaje_iva: campo({ etiqueta: 'IVA', nombre: 'porcentaje_iva', control: 'select', opciones: [['19', '19 %'], ['5', '5 %'], ['0', '0 % (exento)']], valor: '19', clase: 'linea__iva' }),
     };
     const titulo = el('span', { clase: 'linea__titulo' });
     const importe = el('span', { clase: 'linea__importe numero', texto: formatearCentavos(0n) });

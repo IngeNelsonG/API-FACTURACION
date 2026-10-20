@@ -13,6 +13,7 @@ import zipfile
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from facturacion.configuracion import URL_CATALOGO_HABILITACION, Configuracion, ModoUrlQr
@@ -30,7 +31,7 @@ from facturacion.dominio.factura import (
 from facturacion.firma.puertos import FirmadorXml
 from facturacion.persistencia import repositorios
 from facturacion.persistencia.modelos import EstadoFactura, FacturaRegistro, Usuario
-from facturacion.proveedor.puertos import ProveedorFacturacion
+from facturacion.proveedor.puertos import ErrorProveedor, ProveedorFacturacion, RechazoProveedor
 from facturacion.representacion.pdf import generar_pdf
 from facturacion.representacion.qr import generar_qr_png
 from facturacion.servicios.serializacion import factura_a_json, factura_desde_json
@@ -147,8 +148,11 @@ class ServicioFacturacion:
             nombre_archivo=base,
             xml_firmado=xml_firmado,
         )
-        self._transmitir(registro)
+        # Se confirma antes de llamar a la DIAN: libera el bloqueo del consecutivo durante
+        # la llamada y, si el proceso cae a mitad, la factura queda para reintentar.
         sesion.add(registro)
+        sesion.commit()
+        self._transmitir(registro)
         sesion.commit()
         registro_log.info(
             "factura_emitida", extra={"factura_id": registro.id, "estado": registro.estado}
@@ -164,8 +168,10 @@ class ServicioFacturacion:
     ) -> FacturaRegistro:
         """Emite a través del proveedor tecnológico.
 
-        Si el proveedor rechaza o no responde, se propaga la excepción y no se guarda
-        nada: a diferencia del modo directo, aquí no se consumió numeración propia.
+        Antes de llamar al proveedor se guarda un registro pendiente con la referencia
+        enviada: si la respuesta se pierde o el guardado final falla, la factura que el
+        proveedor sí emitió puede conciliarse con esa referencia. Un rechazo explícito
+        borra el pendiente, porque entonces no se emitió nada.
         """
         ahora = datetime.now(ZONA_COLOMBIA).replace(microsecond=0)
         factura = Factura(
@@ -180,8 +186,49 @@ class ServicioFacturacion:
             fecha_vencimiento=solicitud.fecha_vencimiento,
             notas=solicitud.notas,
         )
-        referencia = f"API-{uuid.uuid4().hex[:24]}"
-        resultado = proveedor.emitir(factura, referencia)
+        identificador = uuid.uuid4().hex[:24]
+        referencia = f"API-{identificador}"
+        datos = factura_a_json(factura)
+        datos["proveedor"] = {"nombre": proveedor.nombre, "referencia": referencia}
+        registro = FacturaRegistro(
+            usuario_id=usuario.id,
+            numero=f"PEND-{identificador}",
+            cufe=f"pendiente-{identificador}",
+            fecha_emision=factura.fecha_emision,
+            adquiriente_nombre=factura.adquiriente.nombre,
+            adquiriente_documento=factura.adquiriente.numero_documento,
+            adquiriente_email=factura.adquiriente.email,
+            total=factura.totales.total_a_pagar,
+            estado=EstadoFactura.EN_PROCESO,
+            datos=datos,
+            nombre_archivo=f"fv-PEND-{identificador}"[:40],
+            xml_firmado=b"",
+            respuesta_dian={"descripcion": f"Enviada a {proveedor.nombre}"},
+        )
+        sesion.add(registro)
+        sesion.commit()
+
+        try:
+            resultado = proveedor.emitir(factura, referencia)
+        except RechazoProveedor:
+            sesion.delete(registro)
+            sesion.commit()
+            raise
+        except ErrorProveedor:
+            registro.estado = EstadoFactura.ERROR_ENVIO
+            registro.respuesta_dian = {
+                "descripcion": (
+                    f"Sin respuesta confirmada de {proveedor.nombre}; "
+                    f"concilie con la referencia {referencia}"
+                )
+            }
+            sesion.commit()
+            registro_log.warning(
+                "envio_proveedor_fallido",
+                extra={"factura_id": registro.id, "referencia": referencia},
+            )
+            raise
+
         factura = replace(factura, numeracion=resultado.numeracion)
         factura.cufe = resultado.cufe
         datos = factura_a_json(factura)
@@ -192,28 +239,45 @@ class ServicioFacturacion:
             "identificador": resultado.identificador_externo,
         }
         numero = factura.numeracion.numero_completo
-        registro = FacturaRegistro(
-            usuario_id=usuario.id,
-            numero=numero,
-            cufe=factura.cufe,
-            fecha_emision=factura.fecha_emision,
-            adquiriente_nombre=factura.adquiriente.nombre,
-            adquiriente_documento=factura.adquiriente.numero_documento,
-            adquiriente_email=factura.adquiriente.email,
-            total=factura.totales.total_a_pagar,
-            estado=EstadoFactura.ACEPTADA,
-            datos=datos,
-            nombre_archivo=f"fv-{numero}"[:40],
-            xml_firmado=resultado.xml or b"",
-            respuesta_dian={
-                "codigo": "00",
-                "descripcion": f"Validada por la DIAN a través de {proveedor.nombre}",
-                "mensajes": resultado.mensajes,
-                "consultado_en": datetime.now(UTC).isoformat(),
-            },
-        )
-        sesion.add(registro)
-        sesion.commit()
+        registro.numero = numero
+        registro.cufe = factura.cufe
+        registro.estado = EstadoFactura.ACEPTADA
+        registro.datos = datos
+        registro.nombre_archivo = f"fv-{numero}"[:40]
+        registro.xml_firmado = resultado.xml or b""
+        registro.respuesta_dian = {
+            "codigo": "00",
+            "descripcion": f"Validada por la DIAN a través de {proveedor.nombre}",
+            "mensajes": resultado.mensajes,
+            "consultado_en": datetime.now(UTC).isoformat(),
+        }
+        try:
+            sesion.commit()
+        except IntegrityError:
+            # Número o CUFE ya existen en la base (p. ej. mezcla con el modo directo).
+            # La factura sí se emitió: se conserva el pendiente con lo que respondió el
+            # proveedor para conciliarla, en vez de perderla.
+            sesion.rollback()
+            registro.estado = EstadoFactura.ERROR_ENVIO
+            registro.datos = {
+                **registro.datos,
+                "proveedor": {**datos["proveedor"], "numero": numero, "cufe": factura.cufe},
+            }
+            registro.respuesta_dian = {
+                "descripcion": (
+                    f"{proveedor.nombre} emitió la factura {numero}, pero ya existe "
+                    "otra con ese número o CUFE en esta base de datos"
+                )
+            }
+            sesion.commit()
+            registro_log.error(
+                "factura_proveedor_duplicada",
+                extra={"factura_id": registro.id, "referencia": referencia},
+            )
+            raise ErrorNegocio(
+                f"{proveedor.nombre} emitió la factura {numero}, pero ya existe otra con ese "
+                "número en esta base de datos. Quedó registrada para conciliación."
+            ) from None
         registro_log.info(
             "factura_emitida_proveedor",
             extra={"factura_id": registro.id, "proveedor": proveedor.nombre},
@@ -223,6 +287,12 @@ class ServicioFacturacion:
     def reintentar_envio(self, sesion: Session, registro: FacturaRegistro) -> FacturaRegistro:
         if registro.estado != EstadoFactura.ERROR_ENVIO:
             raise EstadoNoPermitido("Solo se reintentan facturas con error de envío")
+        if "proveedor" in registro.datos:
+            # Reenviar podría duplicar una factura que el proveedor sí emitió.
+            raise EstadoNoPermitido(
+                "Esta factura se envió por el proveedor tecnológico: concíliela en su "
+                "portal con la referencia guardada antes de volver a emitirla"
+            )
         self._transmitir(registro)
         sesion.commit()
         return registro

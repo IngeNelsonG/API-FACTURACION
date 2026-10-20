@@ -79,6 +79,7 @@ class Configuracion(BaseSettings):
     jwt_audiencia: str = "api-facturacion-clientes"
     jwt_minutos_expiracion: int = Field(default=30, ge=1, le=24 * 60)
     login_max_intentos: int = Field(default=5, ge=1)
+    login_max_intentos_ip: int = Field(default=30, ge=1)
     login_ventana_segundos: int = Field(default=300, ge=1)
     registro_publico: bool = False
 
@@ -153,6 +154,9 @@ class Configuracion(BaseSettings):
             raise ValueError("NUMERACION_DESDE no puede ser mayor que NUMERACION_HASTA")
         if self.smtp_ssl and self.smtp_starttls:
             raise ValueError("SMTP_SSL y SMTP_STARTTLS son excluyentes")
+        if self.smtp_usuario and not (self.smtp_ssl or self.smtp_starttls):
+            # Sin TLS, la clave SMTP viajaría en texto plano.
+            raise ValueError("SMTP con usuario y clave requiere SMTP_SSL o SMTP_STARTTLS")
         if self.entorno is Entorno.PRODUCCION:
             secreto = self.jwt_secreto.get_secret_value()
             # También se rechaza el marcador de .env.example ("CAMBIAR-...").

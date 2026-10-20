@@ -81,12 +81,35 @@ def test_rechazo_del_proveedor_no_guarda_la_factura(cliente, auth_facturador, pr
     assert cliente.get("/api/v1/facturas", headers=auth_facturador).json()["total"] == 0
 
 
-def test_proveedor_caido_responde_502(cliente, auth_facturador, proveedor):
+def test_proveedor_caido_deja_la_referencia_para_conciliar(cliente, auth_facturador, proveedor):
     proveedor.error = ErrorProveedor("timeout")
     respuesta = cliente.post("/api/v1/facturas", json=factura_valida(), headers=auth_facturador)
 
     assert respuesta.status_code == 502
     assert "timeout" not in respuesta.text
+    _, referencia = proveedor.recibidas[0]
+    resumen = cliente.get("/api/v1/facturas", headers=auth_facturador).json()["elementos"][0]
+    ruta = f"/api/v1/facturas/{resumen['id']}"
+    pendiente = cliente.get(ruta, headers=auth_facturador).json()
+    assert pendiente["estado"] == "error_envio"
+    assert referencia in pendiente["respuesta_dian"]["descripcion"]
+    # Reenviar podría duplicar una factura que el proveedor sí emitió.
+    reintento = cliente.post(f"{ruta}/reintentar-envio", headers=auth_facturador)
+    assert reintento.status_code == 409
+
+
+def test_numero_repetido_no_pierde_la_factura_emitida(cliente, auth_facturador, proveedor):
+    primera = cliente.post("/api/v1/facturas", json=factura_valida(), headers=auth_facturador)
+    assert primera.status_code == 201
+    proveedor.recibidas.clear()
+
+    respuesta = cliente.post("/api/v1/facturas", json=factura_valida(), headers=auth_facturador)
+
+    assert respuesta.status_code == 422
+    assert "SETP990000123" in str(respuesta.json()["detalle"])
+    listado = cliente.get("/api/v1/facturas", headers=auth_facturador).json()
+    assert listado["total"] == 2
+    assert {item["estado"] for item in listado["elementos"]} == {"aceptada", "error_envio"}
 
 
 def test_xml_no_disponible(cliente, auth_facturador, proveedor):

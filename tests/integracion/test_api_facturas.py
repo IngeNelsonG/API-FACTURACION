@@ -180,3 +180,10 @@ def test_reintentar_envio_solo_con_error(cliente, auth_facturador):
         f"/api/v1/facturas/{factura['id']}/reintentar-envio", headers=auth_facturador
     )
     assert respuesta.status_code == 409
+
+
+def test_rechaza_caracteres_de_control(cliente, auth_facturador):
+    datos = factura_valida()
+    datos["lineas"][0]["descripcion"] = "Servicio\x01x"
+    respuesta = cliente.post("/api/v1/facturas", json=datos, headers=auth_facturador)
+    assert respuesta.status_code == 422

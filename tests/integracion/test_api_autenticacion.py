@@ -51,6 +51,16 @@ def test_login_bloquea_por_fuerza_bruta(cliente, config):
     assert "retry-after" in bloqueado.headers
 
 
+def test_login_bloquea_rociado_de_contrasenas_por_ip(cliente, config):
+    for indice in range(config.login_max_intentos_ip):
+        cliente.post(RUTA_LOGIN, data={"username": f"u{indice}@example.com", "password": "mala"})
+    crear_usuario(cliente, "ana@example.com", Rol.FACTURADOR)
+    bloqueado = cliente.post(
+        RUTA_LOGIN, data={"username": "ana@example.com", "password": CONTRASENA}
+    )
+    assert bloqueado.status_code == 429
+
+
 def _token(config, **cambios):
     ahora = datetime.now(UTC)
     reclamos = {
@@ -161,3 +171,17 @@ def test_cuerpo_demasiado_grande(cliente, auth_facturador):
         headers={**auth_facturador, "Content-Type": "application/json"},
     )
     assert respuesta.status_code == 413
+
+
+def test_cuerpo_grande_sin_content_length(cliente, auth_facturador):
+    def trozos():
+        for _ in range(3):
+            yield b"x" * (1024 * 1024)
+
+    respuesta = cliente.post(
+        "/api/v1/facturas",
+        content=trozos(),
+        headers={**auth_facturador, "Content-Type": "application/json"},
+    )
+    assert respuesta.status_code == 413
+    assert respuesta.headers["x-content-type-options"] == "nosniff"

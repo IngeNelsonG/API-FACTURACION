@@ -76,3 +76,25 @@ def test_configuracion_coherente():
     config = Configuracion(_env_file=None, cors_origenes="https://a.com, https://b.com")
     assert config.cors_origenes == ["https://a.com", "https://b.com"]
     assert "DIAN_SOFTWARE_ID" in config.faltantes_para_habilitacion()
+
+
+def test_limitador_no_acumula_claves_vencidas(monkeypatch):
+    reloj = [1000.0]
+    monkeypatch.setattr("facturacion.seguridad.limitador.time.monotonic", lambda: reloj[0])
+    limitador = LimitadorIntentos(max_intentos=2, ventana_segundos=10)
+    for indice in range(100):
+        assert not limitador.bloqueado(f"10.0.0.1|usuario{indice}@example.com")
+    limitador.registrar_fallo("clave")
+    assert len(limitador._intentos) == 1
+    reloj[0] += 11
+    assert not limitador.bloqueado("clave")
+    assert limitador._intentos == {}
+
+
+def test_smtp_con_credenciales_exige_tls():
+    with pytest.raises(ValueError, match="SMTP_SSL o SMTP_STARTTLS"):
+        Configuracion(
+            _env_file=None, smtp_usuario="u@example.com", smtp_starttls=False, smtp_ssl=False
+        )
+    # Sin credenciales (p. ej. Mailpit local) se permite sin TLS.
+    Configuracion(_env_file=None, smtp_starttls=False, smtp_ssl=False)
