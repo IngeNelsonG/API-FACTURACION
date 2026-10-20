@@ -9,6 +9,7 @@ certificados/*
 # Secretos / variables de entorno
 .env
 .env.*
+!.env.example
 
 # Python / datos locales
 __pycache__/
