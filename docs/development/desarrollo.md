@@ -43,8 +43,7 @@ alembic revision --autogenerate -m "descripcion"   # tras cambiar persistencia/m
 ## Docker
 
 ```bash
-cp .env.example .env
-export POSTGRES_PASSWORD=$(python -c "import secrets; print(secrets.token_urlsafe(24))")
+cp .env.example .env        # y cambie JWT_SECRETO y POSTGRES_PASSWORD
 docker compose up --build
 docker compose exec api python -m facturacion.cli crear-admin --email admin@example.com --nombre Admin
 ```

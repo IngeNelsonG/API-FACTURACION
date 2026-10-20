@@ -250,8 +250,7 @@ La CI (`.github/workflows/ci.yml`) corre todo esto y exige cobertura ≥ 85 %.
 ## 10. Docker Compose (API + PostgreSQL + Mailpit)
 
 ```bash
-cp .env.example .env                                   # y cambie JWT_SECRETO
-export POSTGRES_PASSWORD=$(python -c "import secrets; print(secrets.token_urlsafe(24))")
+cp .env.example .env                                   # y cambie JWT_SECRETO y POSTGRES_PASSWORD
 docker compose up --build
 docker compose exec api python -m facturacion.cli crear-admin --email admin@example.com --nombre Admin
 ```
@@ -260,6 +259,8 @@ docker compose exec api python -m facturacion.cli crear-admin --email admin@exam
 - El contenedor aplica `alembic upgrade head` al iniciar y corre como usuario sin privilegios.
 - `docker-compose.yml` **fuerza** `CORREO_MODO=smtp` hacia Mailpit y la `DATABASE_URL` de
   PostgreSQL, por encima de lo que diga el `.env`.
+- `POSTGRES_PASSWORD` se lee del `.env`: crea la base `facturacion` (usuario `facturacion`) y
+  el contenedor de la API arma su `DATABASE_URL` con ella. No hace falta editar `DATABASE_URL`.
 - Los puertos se publican solo en `127.0.0.1`.
 
 ## 11. Solución de problemas
@@ -287,6 +288,6 @@ docker compose exec api python -m facturacion.cli crear-admin --email admin@exam
 | Modo Factus: "Reintentar envío" responde 409 | Por diseño: reenviar podría duplicar una factura que Factus sí emitió | Concilie con la referencia guardada en la respuesta DIAN del detalle |
 | Modo Factus: 422 con `"campo": "proveedor"` | Factus o la DIAN rechazaron los datos | Lea los mensajes; p. ej. cantidades con más de 2 decimales |
 | Modo Factus: `GET …/xml` responde 404 | Factus no entregó el XML (descarga de mejor esfuerzo) | Descárguelo desde el panel de Factus |
-| `docker compose`: "defina POSTGRES_PASSWORD" | Variable no exportada | `export POSTGRES_PASSWORD=…` antes de `up` |
+| `docker compose`: "defina POSTGRES_PASSWORD" | Falta en el `.env` | Agregue `POSTGRES_PASSWORD=...` al `.env` (vea `.env.example`) |
 | Puerto 8000 ocupado | Otro proceso | `uvicorn facturacion.asgi:app --port 8001` (y ajuste `URL_PUBLICA_BASE`) |
 | `/docs` responde 404 | `ENTORNO=produccion` desactiva Swagger | Use `ENTORNO=desarrollo` localmente |
