@@ -13,6 +13,7 @@ from facturacion.api.middleware import registrar_middleware
 from facturacion.api.rutas import autenticacion, facturas, publico
 from facturacion.arranque import construir_contenedor
 from facturacion.configuracion import Configuracion, Entorno, obtener_configuracion
+from facturacion.web import rutas as web
 
 
 def crear_app(config: Configuracion | None = None) -> FastAPI:
@@ -40,4 +41,5 @@ def crear_app(config: Configuracion | None = None) -> FastAPI:
     app.include_router(publico.router)
     app.include_router(autenticacion.router)
     app.include_router(facturas.router)
+    app.include_router(web.router)
     return app

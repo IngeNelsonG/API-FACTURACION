@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from facturacion.correo.puertos import ErrorCorreo
 from facturacion.firma.puertos import ErrorFirma
+from facturacion.proveedor.puertos import ErrorProveedor, RechazoProveedor
 from facturacion.servicios.facturacion import ErrorNegocio, EstadoNoPermitido
 
 registro_log = logging.getLogger(__name__)
@@ -36,6 +37,20 @@ def registrar_manejadores(app: FastAPI) -> None:
     @app.exception_handler(ErrorNegocio)
     async def _negocio(_: Request, error: ErrorNegocio) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error))
+
+    @app.exception_handler(RechazoProveedor)
+    async def _rechazo_proveedor(_: Request, error: RechazoProveedor) -> JSONResponse:
+        return _respuesta(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            [{"campo": "proveedor", "mensaje": mensaje} for mensaje in error.mensajes],
+        )
+
+    @app.exception_handler(ErrorProveedor)
+    async def _proveedor(_: Request, error: ErrorProveedor) -> JSONResponse:
+        registro_log.warning("proveedor_no_disponible: %s", error)
+        return _respuesta(
+            status.HTTP_502_BAD_GATEWAY, "El proveedor de facturación no está disponible"
+        )
 
     @app.exception_handler(ErrorCorreo)
     async def _correo(_: Request, error: ErrorCorreo) -> JSONResponse:

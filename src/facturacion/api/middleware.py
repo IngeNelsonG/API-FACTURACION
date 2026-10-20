@@ -18,6 +18,16 @@ _CABECERAS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 }
 _CSP_API = "default-src 'none'; frame-ancestors 'none'"
+# La interfaz web solo carga recursos propios: sin scripts/estilos en línea ni orígenes externos.
+_CSP_WEB = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; "
+    "connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'; "
+    "frame-ancestors 'none'"
+)
+
+
+def _es_ruta_web(ruta: str) -> bool:
+    return ruta == "/app" or ruta.startswith(("/app/", "/verificar/"))
 
 
 def registrar_middleware(app: FastAPI, *, hsts: bool) -> None:
@@ -35,7 +45,14 @@ def registrar_middleware(app: FastAPI, *, hsts: bool) -> None:
             )
         respuesta = await siguiente(request)
         respuesta.headers.update(_CABECERAS)
-        if not request.url.path.startswith(RUTAS_DOCUMENTACION):
+        ruta = request.url.path
+        if _es_ruta_web(ruta):
+            respuesta.headers["Content-Security-Policy"] = _CSP_WEB
+            # JS/CSS/SVG pueden revalidarse (ETag); el HTML nunca se guarda en caché.
+            es_html = respuesta.headers.get("content-type", "").startswith("text/html")
+            es_activo = respuesta.status_code in (200, 304) and not es_html
+            respuesta.headers["Cache-Control"] = "no-cache" if es_activo else "no-store"
+        elif not ruta.startswith(RUTAS_DOCUMENTACION):
             # Swagger UI necesita cargar scripts; el resto de la API no sirve HTML.
             respuesta.headers["Content-Security-Policy"] = _CSP_API
             respuesta.headers["Cache-Control"] = "no-store"

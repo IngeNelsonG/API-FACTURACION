@@ -15,7 +15,8 @@ facturador. Factus ofrece una API REST con un ambiente *sandbox* gratuito.
 ## Decision
 
 - Nuevo puerto `ProveedorFacturacion` (`proveedor/puertos.py`) con un adaptador
-  `ClienteFactus` (`proveedor/factus.py`): OAuth2 *password grant* y `POST /v1/bills/validate`.
+  `ClienteFactus` (`proveedor/factus.py`): OAuth2 *password grant* (`/oauth/token`), `POST /v2/bills/validate` y
+  `GET /v2/bills/{numero}/download-xml` (API v2 de Factus).
 - `FACTURACION_MODO=directo|factus`. En `factus` el proveedor asigna número, CUFE y
   QR; la API sigue validando la entrada, calculando totales, guardando la factura,
   generando el PDF y enviando el correo.
@@ -33,8 +34,10 @@ facturador. Factus ofrece una API REST con un ambiente *sandbox* gratuito.
 ## Consequences
 
 - Se puede probar con un sistema real de facturación sin certificado ni RUT propio.
-- Los catálogos de Factus (tipos de documento, municipios, tributos) usan ids propios;
-  el adaptador los traduce y debe revisarse si Factus los cambia.
+- La API v2 de Factus usa los mismos códigos DIAN/DANE que el dominio (tipo de
+  documento, municipio, unidad de medida), así que no hay tablas de traducción propias.
+- Factus no publica credenciales de sandbox oficiales en su documentación: cada
+  desarrollador debe solicitarlas.
 - No se ha probado en vivo desde la nube porque el entorno bloquea el dominio de Factus;
   las pruebas automáticas usan respuestas simuladas.
 

@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import io
 import logging
+import uuid
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -29,6 +30,7 @@ from facturacion.dominio.factura import (
 from facturacion.firma.puertos import FirmadorXml
 from facturacion.persistencia import repositorios
 from facturacion.persistencia.modelos import EstadoFactura, FacturaRegistro, Usuario
+from facturacion.proveedor.puertos import ProveedorFacturacion
 from facturacion.representacion.pdf import generar_pdf
 from facturacion.representacion.qr import generar_qr_png
 from facturacion.servicios.serializacion import factura_a_json, factura_desde_json
@@ -66,16 +68,21 @@ class ServicioFacturacion:
         firmador: FirmadorXml,
         cliente_dian: ClienteDian,
         correo: ServicioCorreo,
+        proveedor: ProveedorFacturacion | None = None,
     ) -> None:
         self._config = config
         self._firmador = firmador
         self._dian = cliente_dian
         self._correo = correo
+        # Con proveedor tecnológico, numeración, CUFE, firma y envío los hace él.
+        self._proveedor = proveedor
 
     # ------------------------------------------------------------------ emisión
     def emitir(
         self, sesion: Session, usuario: Usuario, solicitud: SolicitudFactura
     ) -> FacturaRegistro:
+        if self._proveedor is not None:
+            return self._emitir_con_proveedor(sesion, usuario, solicitud, self._proveedor)
         config = self._config
         ahora = datetime.now(ZONA_COLOMBIA).replace(microsecond=0)
         if not config.numeracion_fecha_desde <= ahora.date() <= config.numeracion_fecha_hasta:
@@ -148,6 +155,71 @@ class ServicioFacturacion:
         )
         return registro
 
+    def _emitir_con_proveedor(
+        self,
+        sesion: Session,
+        usuario: Usuario,
+        solicitud: SolicitudFactura,
+        proveedor: ProveedorFacturacion,
+    ) -> FacturaRegistro:
+        """Emite a través del proveedor tecnológico.
+
+        Si el proveedor rechaza o no responde, se propaga la excepción y no se guarda
+        nada: a diferencia del modo directo, aquí no se consumió numeración propia.
+        """
+        ahora = datetime.now(ZONA_COLOMBIA).replace(microsecond=0)
+        factura = Factura(
+            emisor=self._emisor(),
+            adquiriente=solicitud.adquiriente,
+            lineas=solicitud.lineas,
+            numeracion=Numeracion("", 0, "", ahora.date(), ahora.date(), 0, 0),
+            fecha_emision=ahora.date(),
+            hora_emision=ahora.timetz(),
+            forma_pago=solicitud.forma_pago,
+            medio_pago=solicitud.medio_pago,
+            fecha_vencimiento=solicitud.fecha_vencimiento,
+            notas=solicitud.notas,
+        )
+        referencia = f"API-{uuid.uuid4().hex[:24]}"
+        resultado = proveedor.emitir(factura, referencia)
+        factura = replace(factura, numeracion=resultado.numeracion)
+        factura.cufe = resultado.cufe
+        datos = factura_a_json(factura)
+        datos["url_qr"] = resultado.url_qr
+        datos["proveedor"] = {
+            "nombre": proveedor.nombre,
+            "referencia": referencia,
+            "identificador": resultado.identificador_externo,
+        }
+        numero = factura.numeracion.numero_completo
+        registro = FacturaRegistro(
+            usuario_id=usuario.id,
+            numero=numero,
+            cufe=factura.cufe,
+            fecha_emision=factura.fecha_emision,
+            adquiriente_nombre=factura.adquiriente.nombre,
+            adquiriente_documento=factura.adquiriente.numero_documento,
+            adquiriente_email=factura.adquiriente.email,
+            total=factura.totales.total_a_pagar,
+            estado=EstadoFactura.ACEPTADA,
+            datos=datos,
+            nombre_archivo=f"fv-{numero}"[:40],
+            xml_firmado=resultado.xml or b"",
+            respuesta_dian={
+                "codigo": "00",
+                "descripcion": f"Validada por la DIAN a través de {proveedor.nombre}",
+                "mensajes": resultado.mensajes,
+                "consultado_en": datetime.now(UTC).isoformat(),
+            },
+        )
+        sesion.add(registro)
+        sesion.commit()
+        registro_log.info(
+            "factura_emitida_proveedor",
+            extra={"factura_id": registro.id, "proveedor": proveedor.nombre},
+        )
+        return registro
+
     def reintentar_envio(self, sesion: Session, registro: FacturaRegistro) -> FacturaRegistro:
         if registro.estado != EstadoFactura.ERROR_ENVIO:
             raise EstadoNoPermitido("Solo se reintentan facturas con error de envío")
@@ -212,17 +284,23 @@ class ServicioFacturacion:
     def url_consulta(self, cufe: str) -> str:
         if self._config.qr_url_modo is ModoUrlQr.DIAN:
             return f"{URL_CATALOGO_HABILITACION}{cufe}"
-        return f"{self._config.url_publica_base.rstrip('/')}/api/v1/verificacion/{cufe}"
+        return f"{self._config.url_publica_base.rstrip('/')}/verificar/{cufe}"
 
-    def contenido_qr(self, factura: Factura) -> str:
-        return contenido_qr(factura, self.url_consulta(factura.cufe))
+    def url_registro(self, registro: FacturaRegistro) -> str:
+        """URL del QR: la que entregó el proveedor tecnológico o la configurada."""
+        return registro.datos.get("url_qr") or self.url_consulta(registro.cufe)
+
+    def contenido_qr(self, factura: Factura, url: str | None = None) -> str:
+        return contenido_qr(factura, url or self.url_consulta(factura.cufe))
 
     def qr_png(self, registro: FacturaRegistro) -> bytes:
-        return generar_qr_png(self.contenido_qr(self.reconstruir(registro)))
+        factura = self.reconstruir(registro)
+        return generar_qr_png(self.contenido_qr(factura, self.url_registro(registro)))
 
     def pdf(self, registro: FacturaRegistro) -> bytes:
         factura = self.reconstruir(registro)
-        return generar_pdf(factura, self.contenido_qr(factura), str(registro.estado))
+        contenido = self.contenido_qr(factura, self.url_registro(registro))
+        return generar_pdf(factura, contenido, str(registro.estado))
 
     def enviar_correo(
         self, sesion: Session, registro: FacturaRegistro, destinatario: str | None
@@ -238,7 +316,7 @@ class ServicioFacturacion:
                 f"Señor(a) {registro.adquiriente_nombre}:\n\n"
                 f"Adjuntamos la factura electrónica {registro.numero} emitida por {emisor}.\n"
                 f"CUFE: {registro.cufe}\n"
-                f"Puede verificarla en: {self.url_consulta(registro.cufe)}\n"
+                f"Puede verificarla en: {self.url_registro(registro)}\n"
             ),
             adjuntos=[
                 Adjunto(
@@ -258,7 +336,8 @@ class ServicioFacturacion:
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archivo:
             archivo.writestr(f"{registro.nombre_archivo}.pdf", self.pdf(registro))
-            archivo.writestr(f"{registro.nombre_archivo}.xml", registro.xml_firmado)
+            if registro.xml_firmado:
+                archivo.writestr(f"{registro.nombre_archivo}.xml", registro.xml_firmado)
             if registro.application_response:
                 archivo.writestr(
                     f"ar{registro.nombre_archivo[2:]}.xml", registro.application_response

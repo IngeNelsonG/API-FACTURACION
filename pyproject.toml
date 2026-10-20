@@ -40,7 +40,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-facturacion = ["py.typed"]
+facturacion = ["py.typed", "web/static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -27,7 +27,7 @@ def test_emitir_factura_calcula_totales_y_queda_aceptada(cliente, auth_facturado
     assert len(factura["cufe"]) == 96
     # 2 x 150.000 + 45.000,50 = 345.000,50; IVA 19% de 300.000 = 57.000
     assert Decimal(factura["total"]) == Decimal("402000.50")
-    assert factura["url_verificacion"].endswith(f"/api/v1/verificacion/{factura['cufe']}")
+    assert factura["url_verificacion"].endswith(f"/verificar/{factura['cufe']}")
 
 
 def test_numeracion_es_consecutiva(cliente, auth_facturador):

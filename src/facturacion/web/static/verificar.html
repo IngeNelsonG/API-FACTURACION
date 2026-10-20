@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Verificación de factura electrónica</title>
+  <link rel="icon" href="/app/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app/css/estilos.css">
+  <script type="module" src="/app/js/verificar.js"></script>
+</head>
+<body class="pagina-verificar">
+  <div class="banner-pruebas" role="note">
+    <strong>Ambiente de pruebas</strong> — sin validez tributaria
+  </div>
+  <main class="verificar" id="principal">
+    <header class="verificar__cabecera">
+      <img class="marca__logo marca__logo--grande" src="/app/img/logo.svg" alt="" width="48" height="48">
+      <div>
+        <p class="verificar__sobretitulo">Facturación Electrónica</p>
+        <h1 class="verificar__titulo">Verificación de factura</h1>
+      </div>
+    </header>
+    <section class="tarjeta verificar__tarjeta" id="resultado" aria-live="polite" aria-busy="true">
+      <p class="cargando-pagina">Consultando la factura…</p>
+    </section>
+    <p class="verificar__pie">
+      Esta página muestra los datos públicos del documento asociados a su CUFE.
+      Nunca se exponen datos del adquiriente.
+    </p>
+  </main>
+  <noscript><p class="noscript">Esta página requiere JavaScript.</p></noscript>
+</body>
+</html>

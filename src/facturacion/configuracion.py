@@ -17,6 +17,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 URL_HABILITACION_DIAN = "https://vpfe-hab.dian.gov.co/WcfDianCustomerServices.svc"
 URL_CATALOGO_HABILITACION = "https://catalogo-vpfe-hab.dian.gov.co/document/searchqr?documentkey="
+URL_SANDBOX_FACTUS = "https://api-sandbox.factus.com.co"
 
 # Valor de desarrollo explícitamente inseguro: se rechaza en producción.
 _SECRETO_DESARROLLO = "desarrollo-inseguro-cambiar-este-secreto-jwt-0000"
@@ -42,6 +43,17 @@ class ModoDian(StrEnum):
 class ModoCorreo(StrEnum):
     SIMULADO = "simulado"
     SMTP = "smtp"
+
+
+class ModoFacturacion(StrEnum):
+    """``directo``: la API firma y transmite a la DIAN (software propio).
+
+    ``factus``: delega numeración, CUFE, firma y transmisión a Factus
+    (proveedor tecnológico; ver ADR-004).
+    """
+
+    DIRECTO = "directo"
+    FACTUS = "factus"
 
 
 class ModoUrlQr(StrEnum):
@@ -115,6 +127,16 @@ class Configuracion(BaseSettings):
     smtp_ssl: bool = False
     smtp_timeout_segundos: float = Field(default=30, gt=0)
 
+    # --- Proveedor tecnológico (Factus) ---
+    facturacion_modo: ModoFacturacion = ModoFacturacion.DIRECTO
+    factus_url: str = URL_SANDBOX_FACTUS
+    factus_client_id: str = ""
+    factus_client_secret: SecretStr = SecretStr("")
+    factus_usuario: str = ""
+    factus_clave: SecretStr = SecretStr("")
+    factus_rango_numeracion_id: int | None = Field(default=None, ge=1)
+    factus_timeout_segundos: float = Field(default=60, gt=0)
+
     # --- QR ---
     qr_url_modo: ModoUrlQr = ModoUrlQr.PROPIA
 
@@ -145,6 +167,18 @@ class Configuracion(BaseSettings):
     def tipo_ambiente_dian(self) -> str:
         """Código ``TipoAmbiente`` del anexo técnico: 1 producción, 2 pruebas."""
         return "2"
+
+    def faltantes_para_factus(self) -> list[str]:
+        faltantes = []
+        if not self.factus_client_id:
+            faltantes.append("FACTUS_CLIENT_ID")
+        if not self.factus_client_secret.get_secret_value():
+            faltantes.append("FACTUS_CLIENT_SECRET")
+        if not self.factus_usuario:
+            faltantes.append("FACTUS_USUARIO")
+        if not self.factus_clave.get_secret_value():
+            faltantes.append("FACTUS_CLAVE")
+        return faltantes
 
     def faltantes_para_habilitacion(self) -> list[str]:
         """Variables obligatorias para hablar con el ambiente de habilitación de la DIAN."""

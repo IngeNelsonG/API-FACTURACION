@@ -5,7 +5,13 @@ from __future__ import annotations
 import logging
 
 from facturacion.api.dependencias import Contenedor
-from facturacion.configuracion import Configuracion, Entorno, ModoCorreo, ModoDian
+from facturacion.configuracion import (
+    Configuracion,
+    Entorno,
+    ModoCorreo,
+    ModoDian,
+    ModoFacturacion,
+)
 from facturacion.correo.puertos import ServicioCorreo
 from facturacion.correo.simulado import ServicioCorreoSimulado
 from facturacion.correo.smtp import ServicioCorreoSmtp
@@ -14,6 +20,8 @@ from facturacion.dian.simulado import ClienteDianSimulado
 from facturacion.dian.soap import ClienteDianSoap
 from facturacion.firma.xades import FirmadorXades
 from facturacion.persistencia.base_datos import Base, crear_fabrica_sesiones, crear_motor
+from facturacion.proveedor.factus import ClienteFactus
+from facturacion.proveedor.puertos import ProveedorFacturacion
 from facturacion.seguridad.limitador import LimitadorIntentos
 from facturacion.servicios.facturacion import ServicioFacturacion
 
@@ -66,6 +74,23 @@ def _correo(config: Configuracion) -> ServicioCorreo:
     )
 
 
+def _proveedor(config: Configuracion) -> ProveedorFacturacion | None:
+    if config.facturacion_modo is ModoFacturacion.DIRECTO:
+        return None
+    faltantes = config.faltantes_para_factus()
+    if faltantes:
+        raise ConfiguracionIncompleta(f"Faltan variables para Factus: {', '.join(faltantes)}")
+    return ClienteFactus(
+        url=config.factus_url,
+        client_id=config.factus_client_id,
+        client_secret=config.factus_client_secret.get_secret_value(),
+        usuario=config.factus_usuario,
+        clave=config.factus_clave.get_secret_value(),
+        rango_numeracion_id=config.factus_rango_numeracion_id,
+        timeout=config.factus_timeout_segundos,
+    )
+
+
 def construir_contenedor(config: Configuracion) -> Contenedor:
     motor = crear_motor(config.database_url)
     if config.entorno is not Entorno.PRODUCCION:
@@ -75,7 +100,7 @@ def construir_contenedor(config: Configuracion) -> Contenedor:
         Base.metadata.create_all(motor)
     firmador = _firmador(config)
     servicio = ServicioFacturacion(
-        config, firmador, _cliente_dian(config, firmador), _correo(config)
+        config, firmador, _cliente_dian(config, firmador), _correo(config), _proveedor(config)
     )
     return Contenedor(
         config=config,

@@ -43,7 +43,7 @@ def _detalle(registro: FacturaRegistro, servicio: ServicioFacturacion) -> Factur
         track_id=registro.track_id,
         correo_enviado_en=registro.correo_enviado_en,
         respuesta_dian=RespuestaDianSalida.model_validate(registro.respuesta_dian or {}),
-        url_verificacion=servicio.url_consulta(registro.cufe),
+        url_verificacion=servicio.url_registro(registro),
         enlaces={
             "pdf": f"{base}/pdf",
             "xml": f"{base}/xml",
@@ -131,6 +131,8 @@ def descargar_pdf(
 )
 def descargar_xml(factura_id: str, usuario: UsuarioDep, sesion: SesionDep) -> Response:
     registro = _cargar(sesion, factura_id, usuario)
+    if not registro.xml_firmado:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "El XML de esta factura no está disponible")
     return _descarga(registro.xml_firmado, "application/xml", f"{registro.nombre_archivo}.xml")
 
 
