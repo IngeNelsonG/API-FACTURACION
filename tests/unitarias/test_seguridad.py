@@ -72,7 +72,7 @@ def test_configuracion_coherente():
     with pytest.raises(ValueError):
         Configuracion(_env_file=None, numeracion_desde=10, numeracion_hasta=1)
     with pytest.raises(ValueError):
-        Configuracion(_env_file=None, smtp_ssl=True, smtp_starttls=True)
+        Configuracion(_env_file=None, mail_ssl=True, mail_starttls=True)
     config = Configuracion(_env_file=None, cors_origenes="https://a.com, https://b.com")
     assert config.cors_origenes == ["https://a.com", "https://b.com"]
     assert "DIAN_SOFTWARE_ID" in config.faltantes_para_habilitacion()
@@ -91,13 +91,41 @@ def test_limitador_no_acumula_claves_vencidas(monkeypatch):
     assert limitador._intentos == {}
 
 
-def test_smtp_con_credenciales_exige_tls():
-    with pytest.raises(ValueError, match="SMTP_SSL o SMTP_STARTTLS"):
+def test_smtp_con_autenticacion_exige_credenciales_y_tls():
+    with pytest.raises(ValueError, match="MAIL_STARTTLS o MAIL_SSL"):
         Configuracion(
-            _env_file=None, smtp_usuario="u@example.com", smtp_starttls=False, smtp_ssl=False
+            _env_file=None,
+            correo_modo="smtp",
+            mail_smtp_auth=True,
+            mail_user="u@example.com",
+            mail_password="clave-de-prueba",
+            mail_starttls=False,
+            mail_ssl=False,
         )
-    # Sin credenciales (p. ej. Mailpit local) se permite sin TLS.
-    Configuracion(_env_file=None, smtp_starttls=False, smtp_ssl=False)
+    with pytest.raises(ValueError, match="MAIL_USER y MAIL_PASSWORD"):
+        Configuracion(
+            _env_file=None, correo_modo="smtp", mail_smtp_auth=True, mail_user="u@example.com"
+        )
+    # En modo simulado no se exigen credenciales aunque MAIL_SMTP_AUTH esté activo.
+    Configuracion(_env_file=None, mail_smtp_auth=True)
+    # Sin autenticación (p. ej. Mailpit local) se permite sin TLS.
+    Configuracion(_env_file=None, mail_starttls=False, mail_ssl=False)
+
+
+def test_variables_mail_y_remitente_por_defecto(monkeypatch):
+    monkeypatch.setenv("MAIL_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("MAIL_PORT", "587")
+    monkeypatch.setenv("MAIL_USER", "cuenta@example.com")
+    monkeypatch.setenv("MAIL_PASSWORD", "clave-de-prueba")
+    monkeypatch.setenv("MAIL_SMTP_AUTH", "true")
+    monkeypatch.setenv("MAIL_STARTTLS", "true")
+    config = Configuracion(_env_file=None)
+    assert (config.mail_host, config.mail_port, config.mail_smtp_auth) == (
+        "smtp.gmail.com",
+        587,
+        True,
+    )
+    assert config.remitente_correo == "cuenta@example.com"
 
 
 def test_logs_incluyen_el_contexto_sin_secretos():
@@ -109,3 +137,20 @@ def test_logs_incluyen_el_contexto_sin_secretos():
         {"msg": "login_fallido", "levelname": "WARNING", "name": "x", "ip": "1.2.3.4"}
     )
     assert FormatoConContexto("%(message)s").format(registro) == "login_fallido ip='1.2.3.4'"
+
+
+@pytest.mark.parametrize(("autenticar", "usuario_esperado"), [(True, "u@example.com"), (False, "")])
+def test_mail_smtp_auth_decide_si_inicia_sesion(tmp_path, autenticar, usuario_esperado):
+    from facturacion.arranque import _correo
+    from facturacion.configuracion import ModoCorreo
+
+    config = Configuracion(
+        _env_file=None,
+        correo_modo=ModoCorreo.SMTP,
+        mail_smtp_auth=autenticar,
+        mail_user="u@example.com",
+        mail_password="clave-de-prueba",
+    )
+    correo = _correo(config)
+    assert correo._usuario == usuario_esperado
+    assert correo._remitente == "u@example.com"

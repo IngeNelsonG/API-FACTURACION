@@ -61,16 +61,18 @@ def _cliente_dian(config: Configuracion, firmador: FirmadorXades) -> ClienteDian
 
 def _correo(config: Configuracion) -> ServicioCorreo:
     if config.correo_modo is ModoCorreo.SIMULADO:
-        return ServicioCorreoSimulado(config.directorio_datos / "correos", config.correo_remitente)
+        return ServicioCorreoSimulado(config.directorio_datos / "correos", config.remitente_correo)
+    # Sin MAIL_SMTP_AUTH no se inicia sesión (p. ej. Mailpit local).
+    autenticar = config.mail_smtp_auth
     return ServicioCorreoSmtp(
-        host=config.smtp_host,
-        puerto=config.smtp_puerto,
-        usuario=config.smtp_usuario,
-        clave=config.smtp_clave.get_secret_value(),
-        remitente=config.correo_remitente,
-        usar_starttls=config.smtp_starttls,
-        usar_ssl=config.smtp_ssl,
-        timeout=config.smtp_timeout_segundos,
+        host=config.mail_host,
+        puerto=config.mail_port,
+        usuario=config.mail_user if autenticar else "",
+        clave=config.mail_password.get_secret_value() if autenticar else "",
+        remitente=config.remitente_correo,
+        usar_starttls=config.mail_starttls,
+        usar_ssl=config.mail_ssl,
+        timeout=config.mail_timeout_segundos,
     )
 
 
