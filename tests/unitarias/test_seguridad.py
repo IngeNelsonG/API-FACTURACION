@@ -59,6 +59,12 @@ def test_produccion_exige_secreto_jwt_propio():
         Configuracion(_env_file=None, entorno=Entorno.PRODUCCION)
     with pytest.raises(ValueError):
         Configuracion(_env_file=None, jwt_secreto="corto")
+    with pytest.raises(ValueError):
+        Configuracion(
+            _env_file=None,
+            entorno=Entorno.PRODUCCION,
+            jwt_secreto="CAMBIAR-por-un-secreto-aleatorio-de-al-menos-32-caracteres",
+        )
     Configuracion(_env_file=None, entorno=Entorno.PRODUCCION, jwt_secreto=SECRETO)
 
 

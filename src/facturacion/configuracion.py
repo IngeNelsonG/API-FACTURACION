@@ -155,7 +155,8 @@ class Configuracion(BaseSettings):
             raise ValueError("SMTP_SSL y SMTP_STARTTLS son excluyentes")
         if self.entorno is Entorno.PRODUCCION:
             secreto = self.jwt_secreto.get_secret_value()
-            if secreto == _SECRETO_DESARROLLO or len(secreto) < 32:
+            # También se rechaza el marcador de .env.example ("CAMBIAR-...").
+            if secreto == _SECRETO_DESARROLLO or secreto.startswith("CAMBIAR") or len(secreto) < 32:
                 raise ValueError("JWT_SECRETO debe definirse con al menos 32 caracteres")
             if "*" in self.cors_origenes:
                 raise ValueError("CORS_ORIGENES no puede contener '*' en producción")
