@@ -98,3 +98,14 @@ def test_smtp_con_credenciales_exige_tls():
         )
     # Sin credenciales (p. ej. Mailpit local) se permite sin TLS.
     Configuracion(_env_file=None, smtp_starttls=False, smtp_ssl=False)
+
+
+def test_logs_incluyen_el_contexto_sin_secretos():
+    import logging
+
+    from facturacion.main import FormatoConContexto
+
+    registro = logging.makeLogRecord(
+        {"msg": "login_fallido", "levelname": "WARNING", "name": "x", "ip": "1.2.3.4"}
+    )
+    assert FormatoConContexto("%(message)s").format(registro) == "login_fallido ip='1.2.3.4'"

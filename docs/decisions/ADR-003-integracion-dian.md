@@ -21,7 +21,7 @@ mientras está en construcción. Además se pidió un QR que "evidencie" la fact
   firmado) y se puede reintentar.
 - En modo simulado se firma con un certificado autofirmado generado en memoria.
 - El QR lleva los datos del anexo (`NumFac`, `FecFac`, …, `CUFE`) y una URL:
-  `QR_URL_MODO=propia` → `GET /api/v1/verificacion/{cufe}` (funciona sin DIAN);
+  `QR_URL_MODO=propia` → página `/verificar/{cufe}` (respaldada por `GET /api/v1/verificacion/{cufe}`) (funciona sin DIAN);
   `QR_URL_MODO=dian` → catálogo de habilitación de la DIAN.
 
 ## Alternatives Considered

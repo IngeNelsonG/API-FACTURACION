@@ -76,7 +76,7 @@ export function renderizarLogin(principal, { alIniciar }) {
         ),
         formulario,
       ),
-      el('p', { clase: 'login__pie', texto: 'Conexión directa con los servicios web de la DIAN · Ambiente de habilitación' }),
+      el('p', { clase: 'login__pie', texto: 'Facturación electrónica DIAN · Ambiente de pruebas' }),
     ),
   );
   email.control.focus();

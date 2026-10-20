@@ -5,33 +5,40 @@
 1. **Cliente → API** (internet): toda entrada es no confiable.
 2. **API → DIAN** (SOAP sobre TLS): las respuestas se analizan como XML no confiable.
 3. **API → SMTP**: los destinatarios provienen del usuario.
-4. **Público → `/api/v1/verificacion/{cufe}`**: sin autenticación.
-5. **Secretos** (certificado, PIN, JWT, SMTP): solo en entorno/archivos fuera de git.
+4. **Público → `/verificar/{cufe}` y `/api/v1/verificacion/{cufe}`**: sin autenticación (destino del QR).
+5. **API → proveedor tecnológico (Factus)**: OAuth2 sobre TLS; sus respuestas son JSON no confiable.
+6. **Secretos** (certificado, PIN, JWT, SMTP, Factus): solo en entorno/archivos fuera de git.
 
 ## STRIDE
 
 | Amenaza | Escenario | Control |
 |---|---|---|
-| **S**poofing | Robo o fuerza bruta de credenciales | Argon2id; limitador por IP+correo (429); mensaje de error único; verificación señuelo contra enumeración por tiempo. |
+| **S**poofing | Robo o fuerza bruta de credenciales | Argon2id; limitador por IP+correo y otro solo por IP contra el rociado de contraseñas (429); mensaje de error único; verificación señuelo contra enumeración por tiempo. |
 | S | Token falsificado / `alg: none` | HS256 fijo, `iss`/`aud`/`exp`/`nbf`/`jti` obligatorios, secreto ≥ 32 caracteres. |
 | **T**ampering | Modificar totales o XML | Totales calculados en el servidor; XML firmado XAdES; CUFE SHA-384. |
 | T | Asignación masiva (`rol`, `activo`) | `extra="forbid"` en todos los esquemas de entrada. |
 | T | Inyección SQL | Solo consultas parametrizadas de SQLAlchemy. |
 | T | Inyección de marcado en el PDF | Texto del usuario escapado antes de `Paragraph`. |
+| T | XSS en la interfaz web | CSP estricta sin scripts en línea; el JS solo usa `textContent`, nunca `innerHTML`. |
+| T | Caracteres de control en textos | Rechazados con 422 (`SIN_CONTROL` en `api/esquemas.py`). |
 | T | Inyección de cabeceras de correo | Rechazo de CR/LF y validación con `email-validator`. |
 | **R**epudiation | Negar la emisión | Firma digital, `ApplicationResponse` de la DIAN guardado, logs de login y emisión. |
 | **I**nformation disclosure | IDOR entre facturadores | Consultas filtradas por dueño; 404 para recursos ajenos. |
 | I | Datos personales en la verificación pública | Solo datos del emisor y del documento. |
 | I | Trazas internas / eco de contraseñas | Manejador genérico 500; errores 422 sin el valor recibido. |
+| I | Clave SMTP en texto plano | Con usuario SMTP, la configuración exige SSL o STARTTLS. |
 | I | Secretos en repositorio o logs | `.gitignore` para certificados y `.env`; `SecretStr`; logs sin claves. |
 | I | XXE / SSRF por XML | Parsers lxml con `resolve_entities=False`, `no_network=True`. |
-| **D**enial of service | Cuerpos enormes / zip bomb / Argon2 | 1 MiB máx. por petición; 500 líneas máx.; límites en el ZIP simulado; contraseña ≤ 128. |
+| **D**enial of service | Cuerpos enormes / zip bomb / Argon2 | 1 MiB máx. por petición, también sin `Content-Length` (`LimiteCuerpo`); 500 líneas máx.; límites en el ZIP simulado; contraseña ≤ 128. |
+| R | Factura emitida por Factus y perdida localmente | Registro pendiente con la referencia antes de llamar al proveedor; no se reenvía automáticamente. |
 | **E**levation of privilege | Rol en el token manipulado | Rol leído de la BD en cada petición; registro de administradores solo por administrador o CLI. |
 
 ## Cabeceras HTTP
 
 `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
-`Content-Security-Policy: default-src 'none'` (excepto Swagger), `Cache-Control: no-store`,
+`Content-Security-Policy: default-src 'none'` en la API; en `/app/` y `/verificar/` una CSP
+que solo permite recursos propios (`script-src 'self'`, sin `unsafe-inline`); Swagger sin CSP.
+`Cache-Control: no-store` (los JS/CSS de la interfaz usan `no-cache`),
 HSTS en producción. CORS desactivado salvo `CORS_ORIGENES` explícitos (nunca `*` en producción).
 
 ## Riesgos residuales (Recommended)
@@ -43,3 +50,6 @@ HSTS en producción. CORS desactivado salvo `CORS_ORIGENES` explícitos (nunca `
 - TLS debe terminarse en un proxy (Nginx/Caddy/balanceador); la app confía en
   `--proxy-headers` para la IP del cliente.
 - Logs estructurados en JSON y monitoreo de errores (Sentry/OpenTelemetry) pendientes.
+- Reintentar una factura del modo directo tras un timeout puede recibir "documento procesado
+  anteriormente": falta consultar el estado por CUFE antes de reenviar.
+- El token JWT se guarda en `sessionStorage` de la interfaz: mitigado por la CSP estricta.

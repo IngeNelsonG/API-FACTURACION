@@ -172,7 +172,7 @@ export async function renderizarDetalle(principal, { id }) {
     if (factura.estado === 'error_envio') {
       acciones.push(accionEstado('Reintentar envío', 'reintentar', () => api.reintentarEnvio(factura.id), (f) => `Reenvío realizado: ${f.estado.replace('_', ' ')}.`));
     }
-    if (factura.estado === 'en_proceso') {
+    if (factura.estado === 'en_proceso' && factura.track_id) {
       acciones.push(accionEstado('Consultar estado', 'consultar', () => api.consultarEstado(factura.id), (f) => `Estado actual: ${f.estado.replace('_', ' ')}.`));
     }
 

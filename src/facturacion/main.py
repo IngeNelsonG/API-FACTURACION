@@ -15,10 +15,38 @@ from facturacion.arranque import construir_contenedor
 from facturacion.configuracion import Configuracion, Entorno, obtener_configuracion
 from facturacion.web import rutas as web
 
+# Atributos que todo LogRecord trae; lo demás proviene de ``extra={...}``.
+_ATRIBUTOS_ESTANDAR = frozenset(vars(logging.makeLogRecord({}))) | {"message", "asctime"}
+
+
+class FormatoConContexto(logging.Formatter):
+    """Agrega al final los campos de ``extra`` (``factura_id``, ``ip``...) como clave=valor."""
+
+    def format(self, registro: logging.LogRecord) -> str:
+        texto = super().format(registro)
+        contexto = {
+            clave: valor
+            for clave, valor in vars(registro).items()
+            if clave not in _ATRIBUTOS_ESTANDAR
+        }
+        if contexto:
+            texto += " " + " ".join(f"{clave}={valor!r}" for clave, valor in contexto.items())
+        return texto
+
+
+def _configurar_logs() -> None:
+    raiz = logging.getLogger()
+    if any(isinstance(manejador.formatter, FormatoConContexto) for manejador in raiz.handlers):
+        return
+    manejador = logging.StreamHandler()
+    manejador.setFormatter(FormatoConContexto("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    raiz.addHandler(manejador)
+    raiz.setLevel(logging.INFO)
+
 
 def crear_app(config: Configuracion | None = None) -> FastAPI:
     config = config or obtener_configuracion()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    _configurar_logs()
     es_produccion = config.entorno is Entorno.PRODUCCION
     app = FastAPI(
         title="API de Facturación Electrónica DIAN",

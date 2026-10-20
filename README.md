@@ -1,11 +1,12 @@
 # API de Facturación Electrónica — DIAN Colombia
 
-API propia para **crear, firmar, transmitir y consultar facturas electrónicas de venta** (y sus notas crédito/débito) conectándose directamente a los **servicios web de la DIAN** bajo el modelo de **validación previa**, en modo de operación **Software Propio**.
+API propia para **crear, firmar, transmitir y consultar facturas electrónicas de venta** conectándose directamente a los **servicios web de la DIAN** bajo el modelo de **validación previa**, en modo de operación **Software Propio**.
 
 > [!NOTE]
 > **Estado:** API funcional en modo **simulado** (sin credenciales DIAN) y lista para el ambiente de
 > **habilitación** al configurar certificado, SoftwareID, PIN y TestSetId
-> ([guía](docs/03-habilitacion/guia-habilitacion.md)). El ambiente de producción no está soportado a propósito.
+> ([guía](docs/03-habilitacion/guia-habilitacion.md)). También puede emitir a través del proveedor
+> tecnológico **Factus** (`FACTURACION_MODO=factus`). El ambiente de producción no está soportado a propósito.
 
 ## Inicio rápido
 
@@ -14,16 +15,38 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env                       # cambie JWT_SECRETO
 python -m facturacion.cli crear-admin --email admin@example.com --nombre "Admin"
-uvicorn facturacion.asgi:app --reload      # Swagger en http://localhost:8000/docs
+uvicorn facturacion.asgi:app --reload      # interfaz web en http://localhost:8000/app/
+                                           # Swagger en http://localhost:8000/docs
 pytest --cov                               # pruebas
 ```
 
 Funcionalidades: login JWT con contraseñas **Argon2id**, emisión de factura (UBL 2.1 + CUFE +
 firma XAdES-EPES + envío SOAP a la DIAN), descarga de **PDF** y **XML**, **QR** con la evidencia de
-la factura y URL de verificación, y **envío por correo** al adquiriente.
+la factura y URL de verificación (`/verificar/{cufe}`), **envío por correo** al adquiriente e
+**interfaz web** en `/app/` (login, listado, nueva factura, detalle, descargas, correo, usuarios).
 
-Stack: Python 3.12, FastAPI, SQLAlchemy/Alembic, lxml + signxml, httpx, reportlab, segno.
+Dos modos de emisión (`FACTURACION_MODO`):
+
+| Modo | Quién numera, firma y transmite | Requisitos |
+|---|---|---|
+| `directo` (defecto) | Esta API (software propio), con `DIAN_MODO=simulado` o `habilitacion` | Ninguno en simulado |
+| `factus` | El proveedor tecnológico **Factus** (API REST v2, sandbox) | Credenciales `FACTUS_*` ([guía](docs/guia/05-factus-sandbox.md)) |
+
+Stack: Python 3.12, FastAPI, SQLAlchemy/Alembic, lxml + signxml, httpx, reportlab, segno;
+interfaz en HTML/CSS/JS sin paso de build.
 Documentación técnica en [`docs/`](docs/README.md); contexto para agentes de IA en [`.agents/`](.agents/README.md).
+
+## Guía para entender el proyecto
+
+Si es su primera vez con la facturación electrónica o va a sustentar el proyecto, lea la
+**[guía de aprendizaje](docs/guia/README.md)**:
+
+1. [Conceptos](docs/guia/01-conceptos.md): DIAN, validación previa, CUFE, UBL 2.1, XAdES, QR, habilitación, Factus.
+2. [Recorrido del código](docs/guia/02-recorrido-del-codigo.md): arquitectura y el viaje de una factura, función por función.
+3. [Seguridad explicada](docs/guia/03-seguridad-explicada.md): cada control y su relación con OWASP Top 10.
+4. [Cómo usarlo](docs/guia/04-como-usarlo.md): tutorial práctico y solución de problemas.
+5. [Factus sandbox](docs/guia/05-factus-sandbox.md): integración con el proveedor tecnológico.
+6. [Preguntas para la sustentación](docs/guia/06-preguntas-para-la-sustentacion.md).
 
 ---
 
@@ -166,7 +189,8 @@ CUFE = SHA384( NumFac + FecFac + HorFac + ValFac
 
 Ver [docs/06-contrato-api/endpoints.md](docs/06-contrato-api/endpoints.md). Resumen:
 `POST /api/v1/auth/login`, `POST /api/v1/facturas`, `GET /api/v1/facturas/{id}/pdf|xml|qr`,
-`POST /api/v1/facturas/{id}/correo`, `GET /api/v1/verificacion/{cufe}` (público, destino del QR).
+`POST /api/v1/facturas/{id}/correo`, `GET /api/v1/verificacion/{cufe}` (JSON público) y
+`GET /verificar/{cufe}` (página pública, destino del QR). La interfaz web vive en `/app/`.
 
 ---
 
@@ -176,7 +200,7 @@ Ver [docs/06-contrato-api/endpoints.md](docs/06-contrato-api/endpoints.md). Resu
 API-FACTURACION/
 ├── .agents/                 Contexto persistente para agentes de IA
 ├── .github/workflows/       CI: lint, tests, migraciones, pip-audit
-├── docs/                    Arquitectura, ADRs, seguridad, contrato API, habilitación
+├── docs/                    Guía de aprendizaje, arquitectura, ADRs, seguridad, contrato API, habilitación
 ├── migraciones/             Alembic
 ├── src/facturacion/
 │   ├── api/                 Rutas FastAPI, esquemas, errores, middleware
@@ -184,11 +208,13 @@ API-FACTURACION/
 │   ├── ubl/                 XML UBL 2.1 + extensiones DIAN, ZIP
 │   ├── firma/               XAdES-EPES (Política de Firma v2)
 │   ├── dian/                Cliente SOAP 1.2 + WS-Security y cliente simulado
+│   ├── proveedor/           Proveedor tecnológico: puerto y cliente REST de Factus
 │   ├── representacion/      PDF y QR
 │   ├── correo/              SMTP y simulado
 │   ├── persistencia/        Modelos y repositorios SQLAlchemy
 │   ├── seguridad/           Argon2id, JWT, limitador de intentos
 │   ├── servicios/           Caso de uso de emisión
+│   ├── web/                 Interfaz web (/app/) y página de verificación (/verificar/{cufe})
 │   ├── arranque.py          Composición de adaptadores
 │   └── cli.py               crear-admin
 ├── recursos/                XSD, listas de valores, política de firma (por descargar)
@@ -202,10 +228,11 @@ API-FACTURACION/
 
 1. ✅ CUFE (verificado con el ejemplo del Anexo), XML UBL, firma XAdES-EPES, cliente SOAP.
 2. ✅ API REST con JWT, PDF + QR, correo, verificación pública.
-3. ⬜ Descargar Anexo 1.9, XSD y listas de valores; validar el XML contra los XSD.
-4. ⬜ Conectar a habilitación con credenciales reales y superar el set de pruebas.
-5. ⬜ Notas crédito/débito (CUDE), `AttachedDocument`, eventos RADIAN.
-6. ⬜ Producción (nuevo ADR): resolución real, monitoreo, reintentos programados.
+3. ✅ Interfaz web (`/app/`) y modo proveedor tecnológico Factus (`FACTURACION_MODO=factus`; sin probar en vivo).
+4. ⬜ Descargar Anexo 1.9, XSD y listas de valores; validar el XML contra los XSD.
+5. ⬜ Conectar a habilitación con credenciales reales y superar el set de pruebas; probar Factus sandbox en vivo.
+6. ⬜ Notas crédito/débito (CUDE), `AttachedDocument`, eventos RADIAN.
+7. ⬜ Producción (nuevo ADR): resolución real, monitoreo, reintentos programados.
 
 ---
 

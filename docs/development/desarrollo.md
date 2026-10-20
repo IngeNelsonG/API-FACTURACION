@@ -14,7 +14,8 @@ python -m facturacion.cli crear-admin --email admin@example.com --nombre "Admin"
 uvicorn facturacion.asgi:app --reload
 ```
 
-Abra http://localhost:8000/docs, use **Authorize** con el correo y la contraseña del
+Abra la interfaz web en http://localhost:8000/app/ e inicie sesión con el administrador,
+o use Swagger en http://localhost:8000/docs con **Authorize** con el correo y la contraseña del
 administrador y pruebe `POST /api/v1/facturas`. Los correos simulados quedan en
 `var/correos/*.eml`.
 

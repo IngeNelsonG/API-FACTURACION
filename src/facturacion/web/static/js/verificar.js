@@ -52,8 +52,8 @@ async function iniciar() {
   document.title = `Factura ${factura.numero} · Verificación`;
   terminar(
     aceptada
-      ? estado('exito', 'check', 'Factura verificada', 'El documento fue emitido por este sistema y aceptado por la DIAN.')
-      : estado('aviso', 'alerta', 'Factura registrada', 'El documento existe, pero no figura como aceptado por la DIAN.'),
+      ? estado('exito', 'check', 'Factura verificada', 'El documento fue emitido por este sistema y figura como aceptado.')
+      : estado('aviso', 'alerta', 'Factura registrada', 'El documento existe, pero no figura como aceptado.'),
     el('p', { clase: 'verificacion__total numero', texto: formatearMoneda(factura.total) }),
     el(
       'dl',
