@@ -1,6 +1,6 @@
 # Guía: pasar de modo simulado a habilitación DIAN
 
-Hoy la API funciona completa en `DIAN_MODO=simulado`. Para conectarla al ambiente
+Hoy la API funciona completa en `DIAN_MODO=simulado`. Para el detalle de cómo obtener cada dato, vea [paso-a-paso-credenciales.md](paso-a-paso-credenciales.md). Para conectarla al ambiente
 de **habilitación** (pruebas) de la DIAN necesita aportar:
 
 | Dato | Variable | Dónde se obtiene |
