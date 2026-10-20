@@ -119,14 +119,17 @@ class Configuracion(BaseSettings):
 
     # --- Correo ---
     correo_modo: ModoCorreo = ModoCorreo.SIMULADO
-    correo_remitente: str = "facturacion@example.com"
-    smtp_host: str = "localhost"
-    smtp_puerto: int = Field(default=587, ge=1, le=65535)
-    smtp_usuario: str = ""
-    smtp_clave: SecretStr = SecretStr("")
-    smtp_starttls: bool = True
-    smtp_ssl: bool = False
-    smtp_timeout_segundos: float = Field(default=30, gt=0)
+    # Si está vacío se usa MAIL_USER (Gmail exige que el remitente sea la cuenta).
+    correo_remitente: str = ""
+    # Servidor SMTP: variables MAIL_* (MAIL_HOST, MAIL_PORT, MAIL_USER, MAIL_PASSWORD...).
+    mail_host: str = "localhost"
+    mail_port: int = Field(default=587, ge=1, le=65535)
+    mail_user: str = ""
+    mail_password: SecretStr = SecretStr("")
+    mail_smtp_auth: bool = False
+    mail_starttls: bool = True
+    mail_ssl: bool = False
+    mail_timeout_segundos: float = Field(default=30, gt=0)
 
     # --- Proveedor tecnológico (Factus) ---
     facturacion_modo: ModoFacturacion = ModoFacturacion.DIRECTO
@@ -152,11 +155,14 @@ class Configuracion(BaseSettings):
     def _validar_coherencia(self) -> Configuracion:
         if self.numeracion_desde > self.numeracion_hasta:
             raise ValueError("NUMERACION_DESDE no puede ser mayor que NUMERACION_HASTA")
-        if self.smtp_ssl and self.smtp_starttls:
-            raise ValueError("SMTP_SSL y SMTP_STARTTLS son excluyentes")
-        if self.smtp_usuario and not (self.smtp_ssl or self.smtp_starttls):
-            # Sin TLS, la clave SMTP viajaría en texto plano.
-            raise ValueError("SMTP con usuario y clave requiere SMTP_SSL o SMTP_STARTTLS")
+        if self.mail_ssl and self.mail_starttls:
+            raise ValueError("MAIL_SSL y MAIL_STARTTLS son excluyentes")
+        if self.correo_modo is ModoCorreo.SMTP and self.mail_smtp_auth:
+            if not self.mail_user or not self.mail_password.get_secret_value():
+                raise ValueError("MAIL_SMTP_AUTH=true requiere MAIL_USER y MAIL_PASSWORD")
+            if not (self.mail_ssl or self.mail_starttls):
+                # Sin TLS, la clave SMTP viajaría en texto plano.
+                raise ValueError("MAIL_SMTP_AUTH=true requiere MAIL_STARTTLS o MAIL_SSL")
         if self.entorno is Entorno.PRODUCCION:
             secreto = self.jwt_secreto.get_secret_value()
             # También se rechaza el marcador de .env.example ("CAMBIAR-...").
@@ -167,6 +173,10 @@ class Configuracion(BaseSettings):
         elif len(self.jwt_secreto.get_secret_value()) < 32:
             raise ValueError("JWT_SECRETO debe tener al menos 32 caracteres")
         return self
+
+    @property
+    def remitente_correo(self) -> str:
+        return self.correo_remitente or self.mail_user or "facturacion@example.com"
 
     @property
     def tipo_ambiente_dian(self) -> str:

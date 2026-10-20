@@ -6,9 +6,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://facturacion:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/facturacion
       CORREO_MODO: smtp
-      SMTP_HOST: mailpit
-      SMTP_PUERTO: "1025"
-      SMTP_STARTTLS: "false"
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_STARTTLS: "false"
+      MAIL_SMTP_AUTH: "false"
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

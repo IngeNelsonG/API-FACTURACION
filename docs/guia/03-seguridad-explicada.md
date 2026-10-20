@@ -215,14 +215,14 @@ de 10 MiB mientras las lee (`ClienteFactus._enviar`).
 |---|---|
 | DIAN | `httpx.Client(verify=True)` en `dian/soap.py`; no existe opción para desactivarlo |
 | Factus | `verify=True` y la URL **debe** ser `https://` (si no, `ValueError` al construir `ClienteFactus`) |
-| SMTP | `ssl.create_default_context()` con STARTTLS (587) o SSL implícito (465), excluyentes; con `SMTP_USUARIO` y sin ninguno de los dos la app **no arranca** (la clave viajaría en claro) |
+| SMTP | `ssl.create_default_context()` con STARTTLS (587) o SSL implícito (465), excluyentes; con `MAIL_SMTP_AUTH=true` y sin ninguno de los dos la app **no arranca** (la clave viajaría en claro) |
 | Navegador → API | Se termina TLS en un proxy (Nginx, Caddy, balanceador); HSTS en producción; uvicorn con `--proxy-headers` en el `Dockerfile` |
 
 ## 3.11 Manejo de secretos
 
 - Secretos solo en `.env` y `certificados/`, ambos en `.gitignore` (también `*.p12`, `*.pfx`, `*.pem`, `*.key`).
 - En `configuracion.py` son `SecretStr` (`JWT_SECRETO`, `DIAN_PIN`, `DIAN_CERTIFICADO_CLAVE`,
-  `NUMERACION_CLAVE_TECNICA`, `SMTP_CLAVE`, `FACTUS_CLIENT_SECRET`, `FACTUS_CLAVE`): al
+  `NUMERACION_CLAVE_TECNICA`, `MAIL_PASSWORD`, `FACTUS_CLIENT_SECRET`, `FACTUS_CLAVE`): al
   imprimirse muestran `**********`.
 - `__repr__` personalizados en `FirmadorXades`, `ServicioCorreoSmtp` y `ClienteFactus` para que
   una traza nunca muestre llaves ni claves.

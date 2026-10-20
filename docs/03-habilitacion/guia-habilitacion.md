@@ -12,7 +12,7 @@ de **habilitación** (pruebas) de la DIAN necesita aportar:
 | TestSetId | `DIAN_TEST_SET_ID` | Portal de habilitación, al registrar el software |
 | Rango de pruebas y clave técnica | `NUMERACION_*` | Portal de habilitación (por defecto `SETP` 990000000–995000000) |
 | Datos del emisor idénticos al RUT | `EMISOR_*` | RUT |
-| Servidor SMTP (para correo real) | `CORREO_MODO=smtp`, `SMTP_*` | Su proveedor de correo |
+| Servidor SMTP (para correo real) | `CORREO_MODO=smtp`, `MAIL_*` | Su proveedor de correo |
 
 El certificado va en `certificados/` (ignorado por git) y las claves solo en `.env`
 o en el gestor de secretos del despliegue. **Nunca** se versionan.

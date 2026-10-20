@@ -52,16 +52,17 @@ Con eso basta: por defecto `DIAN_MODO=simulado`, `CORREO_MODO=simulado`,
 
 ```ini
 CORREO_MODO=smtp
-CORREO_REMITENTE=sucorreo@gmail.com
-SMTP_HOST=smtp.gmail.com
-SMTP_PUERTO=587
-SMTP_STARTTLS=true
-SMTP_SSL=false
-SMTP_USUARIO=sucorreo@gmail.com
-SMTP_CLAVE=la-contraseña-de-aplicación
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=sucorreo@gmail.com
+MAIL_PASSWORD=la-contraseña-de-aplicación
+MAIL_SMTP_AUTH=true
+MAIL_STARTTLS=true
 ```
 
-Use la contraseña de aplicación, **no** su contraseña normal de Google.
+Use la contraseña de aplicación, **no** su contraseña normal de Google. El remitente será
+`MAIL_USER` salvo que defina `CORREO_REMITENTE`. `MAIL_SSL` (por defecto `false`) solo se usa
+con el puerto 465.
 
 ### 3.3 Opcional: Factus sandbox
 
@@ -268,8 +269,9 @@ docker compose exec api python -m facturacion.cli crear-admin --email admin@exam
 | Al arrancar: `JWT_SECRETO debe tener al menos 32 caracteres` | Secreto corto | Genere uno con `secrets.token_urlsafe(48)` |
 | Al arrancar: `Faltan variables para Factus: …` | `FACTURACION_MODO=factus` sin credenciales | Complete `FACTUS_*` o vuelva a `directo` |
 | Al arrancar: `Faltan variables para habilitación: …` / `Falta DIAN_CERTIFICADO_RUTA` | `DIAN_MODO=habilitacion` incompleto | Vea la [guía de habilitación](../03-habilitacion/guia-habilitacion.md) o vuelva a `simulado` |
-| `SMTP_SSL y SMTP_STARTTLS son excluyentes` | Ambos en `true` | 587 → `STARTTLS=true, SSL=false`; 465 → al revés |
-| `SMTP con usuario y clave requiere SMTP_SSL o SMTP_STARTTLS` | `SMTP_USUARIO` definido con ambos en `false` | Active uno de los dos (la clave no puede viajar en claro) |
+| `MAIL_SSL y MAIL_STARTTLS son excluyentes` | Ambos en `true` | 587 → `STARTTLS=true, SSL=false`; 465 → al revés |
+| `MAIL_SMTP_AUTH=true requiere MAIL_STARTTLS o MAIL_SSL` | Autenticación activa con ambos en `false` | Active uno de los dos (la clave no puede viajar en claro) |
+| `MAIL_SMTP_AUTH=true requiere MAIL_USER y MAIL_PASSWORD` | Falta el usuario o la contraseña | Complételos en `.env` |
 | `ModuleNotFoundError: facturacion` | Entorno virtual no activado o sin instalar | `source .venv/bin/activate && pip install -e ".[dev]"` |
 | `crear-admin`: "El correo ya está registrado" | Ya existe | Use otro correo o borre `var/facturacion.db` (solo en desarrollo) |
 | `crear-admin`: "La contraseña debe tener entre 12 y 128 caracteres" | Política | Use una frase más larga |

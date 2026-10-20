@@ -100,19 +100,18 @@ Elija **una** opción.
 3. En `.env`:
    ```
    CORREO_MODO=smtp
-   CORREO_REMITENTE=sucorreo@gmail.com
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PUERTO=587
-   SMTP_STARTTLS=true
-   SMTP_SSL=false
-   SMTP_USUARIO=sucorreo@gmail.com
-   SMTP_CLAVE=<contraseña de aplicación>
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USER=sucorreo@gmail.com
+   MAIL_PASSWORD=<contraseña de aplicación>
+   MAIL_SMTP_AUTH=true
+   MAIL_STARTTLS=true
    ```
 
 ### Opción C: proveedor transaccional (Brevo, SendGrid, Amazon SES…)
 
 Cree la cuenta, verifique el dominio o el remitente y copie el host, puerto,
-usuario y clave SMTP que le da el proveedor en las mismas variables `SMTP_*`.
+usuario y clave SMTP que le da el proveedor en las mismas variables `MAIL_*`.
 
 ## 5. Probar que todo quedó bien
 
