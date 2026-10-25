@@ -2,9 +2,9 @@
 
 API RESTful desarrollada en **Python** con **Flask**, **SQLite3 nativo** y **autenticación JWT** para la emisión, cálculo tributario y gestión de facturas electrónicas de venta ante la **DIAN** para **Personas Naturales**.
 
-> **Materia:** Computación en la Nube (8vo Semestre)  
+> **Materia:** Cloud Computing Para El Desarrollo De Software
 > **Grupo:** Grupo 5  
-> **Integrantes:** Nelson Felipe Gonzales, Daniel Alarcón, Gabriel Bastidas, Michelle Carolina Camargo  
+> **Integrantes:** Nelson Felipe Gonzales Gordillo, Daniel Esteban Alarcón Rojas, Gabriel Felipe Bastidas Alvarado, Michelt Carolina Camargo Cobo
 
 ---
 
@@ -41,7 +41,7 @@ python -m pytest tests/test_api_facturacion.py -v
 ```
 
 ### 6. Pruebas interactivas con Postman
-Importe el archivo [`postman_collection.json`](postman_collection.json) directamente en Postman. Incluye todas las peticiones organizadas secuencialmente con scripts automáticos que gestionan el token JWT y las variables dinámicas de clientes y facturas.
+Importe el archivo `API Facturación DIAN - Grupo 5 (Cloud).postman_collection.json` directamente en Postman. Incluye todas las peticiones organizadas secuencialmente con scripts automáticos que gestionan el token JWT y las variables dinámicas de clientes y facturas.
 
 ---
 
@@ -90,5 +90,3 @@ Para enviar facturas a correos electrónicos reales:
 
 ---
 
-## 🎓 Preparación para la Sustentación
-Consulte la **[Guía de Sustentación Grupo 5](guia_sustentacion_grupo5.md)** para repasar las preguntas probables del docente, la demostración paso a paso y la respuesta a la pregunta de concurrencia y escalabilidad de la Diapositiva 36.

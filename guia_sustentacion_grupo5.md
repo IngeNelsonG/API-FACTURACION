@@ -36,13 +36,13 @@ python -m pytest tests/test_api_facturacion.py -v
 
 ## 3. Demostración en Vivo con Postman (Recomendado)
 
-En la raíz del proyecto se encuentra el archivo **`postman_collection.json`**.  
+En la raíz del proyecto se encuentra el archivo **`API Facturación DIAN - Grupo 5 (Cloud).postman_collection.json`**.  
 Esta colección ya viene configurada con **variables dinámicas (`{{token}}`, `{{persona_id}}`, `{{factura_id}}`)** y scripts automáticos para que no tengas que copiar ni pegar nada a mano.
 
 ### ¿Cómo importar la colección en Postman?
 1. Abre **Postman**.
 2. Haz clic en el botón superior **Import** (o `Ctrl + O`).
-3. Arrastra o selecciona el archivo [`postman_collection.json`](file:///d:/U/OctavoSemestre/Cloud/proyecto-facturacion/API-FACTURACION/postman_collection.json).
+3. Arrastra o selecciona el archivo **`API Facturación DIAN - Grupo 5 (Cloud).postman_collection.json`**.
 4. Verás la carpeta **"API Facturación DIAN - Grupo 5 (Cloud)"** con todas las peticiones organizadas secuencialmente.
 
 ---
