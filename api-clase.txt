@@ -1,0 +1,158 @@
+from flask import Flask, jsonify, request
+import sqlite3
+import jwt, datetime
+from functools import wraps 
+
+app = Flask(__name__)
+
+# Diccionario con todas las familias de códigos de respuesta HTTP
+HTTP_STATUS_FAMILIES = {
+    "1xx": {
+        "category": "Informativos (Informational)",
+        "description": "La petición fue recibida y el servidor continúa procesando la información.",
+        "examples": [100, 101, 102]
+    },
+    "2xx": {
+        "category": "Éxito (Successful)",
+        "description": "La acción fue recibida, entendida, aceptada y procesada con éxito.",
+        "examples": [200, 201, 204]
+    },
+    "3xx": {
+        "category": "Redirección (Redirection)",
+        "description": "El cliente debe realizar acciones adicionales para completar la petición.",
+        "examples": [301, 302, 304]
+    },
+    "4xx": {
+        "category": "Errores del Cliente (Client Error)",
+        "description": "La petición contiene sintaxis incorrecta o no puede ser procesada por culpa del cliente.",
+        "examples": [400, 401, 403, 404]
+    },
+    "5xx": {
+        "category": "Errores del Servidor (Server Error)",
+        "description": "El servidor falló al intentar procesar una petición inicialmente válida.",
+        "examples": [500, 502, 503, 504]
+    }
+}
+
+DB_NAME = 'main.db'
+
+app.config['SECRET_KEY'] = 'clave-secreta'
+USUARIOS = {'profe': 'cloud2026'}
+
+def get_db():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS user (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            telephone TEXT    
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# HEALTH
+@app.route('/')
+def root():
+    return "Mi casita chiquitica chiquitica"
+
+# LOGIN
+@app.route('/login',methods=['POST'])
+def login():
+    data = request.get_json()
+    if USUARIOS.get(data.get('usuario')) == data.get('clave'):
+        token = jwt.encode({
+            'usuario': data['usuario'],
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        },app.config['SECRET_KEY'],
+        algorithm='HS256')
+        return jsonify({'token':token}),200
+    return jsonify({'error':'...'}),401
+
+# Nueva ruta para consultar la información de los códigos HTTP
+@app.route('/http-info')
+def get_http_info():
+    return jsonify(HTTP_STATUS_FAMILIES), 200
+
+# GET 
+@app.route("/users/<int:user_id>")
+def get_user(user_id):
+    conn = get_db()
+    fila = conn.execute(
+        'SELECT * FROM user WHERE id = ?',
+        (user_id,)
+    ).fetchone()
+    conn.close()
+    if fila is None:
+        return jsonify({'error':'...'}),404
+    return jsonify (dict(fila)),200
+
+# POST
+@app.route("/users", methods=['POST'])
+def create_user():
+    data = request.get_json()
+    conn = get_db()
+    cur = conn.execute(
+      'INSERT INTO user (name, telephone) '
+      'VALUES (?, ?)',
+      (data.get('name'), data.get('telephone'))
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'id': cur.lastrowid}), 201
+
+# PUT
+@app.route("/users/<int:user_id>", methods=['PUT'])
+def update_user(user_id):
+    data = request.get_json()
+    
+    # Validar que el usuario exista antes de actualizar
+    conn = get_db()
+    fila = conn.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
+    
+    if fila is None:
+        conn.close()
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+        
+    # Actualizar los datos
+    conn.execute(
+        'UPDATE user SET name = ?, telephone = ? WHERE id = ?',
+        (data.get('name', fila['name']), data.get('telephone', fila['telephone']), user_id)
+    )
+    conn.commit()
+    
+    # Obtener el usuario ya actualizado para responder con sus nuevos datos
+    usuario_actualizado = conn.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
+    conn.close()
+    
+    return jsonify(dict(usuario_actualizado)), 200
+
+# DELETE
+@app.route("/users/<int:user_id>", methods=['DELETE'])
+def delete_user(user_id):
+    conn = get_db()
+    
+    # Verificar si el usuario existe antes de borrarlo
+    fila = conn.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
+    
+    if fila is None:
+        conn.close()
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+        
+    # Eliminar al usuario
+    conn.execute('DELETE FROM user WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'mensaje': f'Usuario con ID {user_id} eliminado exitosamente'}), 200
+
+
+
+if __name__ == "__main__":
+    init_db()
+    app.run(debug=True)
