@@ -51,13 +51,13 @@ def token_required(f):
 def root():
     return jsonify({
         "proyecto": "API de Facturación Electrónica DIAN - Personas Naturales",
-        "materia": "Computación en la Nube - 8vo Semestre",
+        "materia": "Cloud Computing Para El Desarrollo De Software",
         "grupo": "Grupo 5",
         "integrantes": [
-            "Nelson Felipe Gonzales",
-            "Daniel Alarcón",
-            "Gabriel Bastidas",
-            "Michelle Carolina Camargo"
+            "Nelson Felipe Gonzales Gordillo",
+            "Daniel Esteban Alarcón Rojas",
+            "Gabriel Felipe Bastidas Alvarado",
+            "Michelt Carolina Camargo Cobo"
         ],
         "endpoints_principales": {
             "autenticacion": "POST /login",

@@ -1,32 +1,11 @@
 {
   "info": {
-    "_postman_id": "f5e937d2-7c8a-4d2b-9e4a-1a2b3c4d5e6f",
+    "_postman_id": "24d48034-eef7-4349-8c4a-a42374f155d9",
     "name": "API Facturación DIAN - Grupo 5 (Cloud)",
     "description": "Colección completa para pruebas y sustentación de la API de Facturación Electrónica DIAN para Personas Naturales.\nIncluye scripts automáticos para guardar el Token JWT, persona_id y factura_id de forma 100% dinámica.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "39449882"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5000",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "persona_id",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "factura_id",
-      "value": "1",
-      "type": "string"
-    }
-  ],
   "item": [
     {
       "name": "01. Rutas Básicas",
@@ -38,8 +17,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/",
-              "host": ["{{baseUrl}}"],
-              "path": [""]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
             },
             "description": "Ruta pública que retorna la información general del proyecto, integrantes del Grupo 5 y resumen de endpoints."
           },
@@ -56,14 +39,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.token) {",
-                  "    pm.collectionVariables.set('token', jsonData.token);",
-                  "    console.log('Token JWT guardado exitosamente en la colección:', jsonData.token);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "var jsonData = pm.response.json();\nif (jsonData.token) {\n    pm.collectionVariables.set('token', jsonData.token);\n    console.log('Token JWT guardado exitosamente en la colección:', jsonData.token);\n}"
+                ]
               }
             }
           ],
@@ -77,12 +56,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"cloud2026\"\n}"
+              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"cloud2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
             },
             "description": "Inicia sesión con credenciales válidas y mediante su Test Script guarda automáticamente el token en la variable {{token}} para las demás peticiones."
           },
@@ -100,12 +88,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"clave_invalida\"\n}"
+              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"clave_invalida\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
             },
             "description": "Demuestra el manejo de errores HTTP 401 Unauthorized ante credenciales no autorizadas."
           },
@@ -128,12 +125,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Usuario No Autorizado\",\n  \"rut\": \"111-1\",\n  \"cedula\": \"111\",\n  \"direccion\": \"Calle Falsa 123\",\n  \"correo\": \"hacker@test.com\"\n}"
+              "raw": "{\n  \"nombre\": \"Usuario No Autorizado\",\n  \"rut\": \"111-1\",\n  \"cedula\": \"111\",\n  \"direccion\": \"Calle Falsa 123\",\n  \"correo\": \"hacker@test.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/personas",
-              "host": ["{{baseUrl}}"],
-              "path": ["personas"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "personas"
+              ]
             },
             "description": "Demuestra ante el profesor que las rutas de modificación están protegidas por @token_required."
           },
@@ -145,14 +151,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.id) {",
-                  "    pm.collectionVariables.set('persona_id', jsonData.id);",
-                  "    console.log('ID de Burnice White guardado:', jsonData.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "var jsonData = pm.response.json();\nif (jsonData.id) {\n    pm.collectionVariables.set('persona_id', jsonData.id);\n    console.log('ID de Burnice White guardado:', jsonData.id);\n}"
+                ]
               }
             }
           ],
@@ -176,12 +178,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Burnice White\",\n  \"rut\": \"1098765432-1\",\n  \"cedula\": \"1098765432\",\n  \"direccion\": \"Carrera 7 # 71-21, Bogotá D.C.\",\n  \"correo\": \"burnice.white2305@gmail.com\",\n  \"telefono\": \"3109876543\"\n}"
+              "raw": "{\n  \"nombre\": \"Burnice White\",\n  \"rut\": \"1098765432-1\",\n  \"cedula\": \"10933765432\",\n  \"direccion\": \"Carrera 7 # 71-21, Bogotá D.C.\",\n  \"correo\": \"burnice.white2305@gmail.com\",\n  \"telefono\": \"3109876543\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/personas",
-              "host": ["{{baseUrl}}"],
-              "path": ["personas"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "personas"
+              ]
             },
             "description": "Registra a Burnice White en la base de datos SQLite y guarda automáticamente su ID en {{persona_id}}."
           },
@@ -194,8 +205,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/personas",
-              "host": ["{{baseUrl}}"],
-              "path": ["personas"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "personas"
+              ]
             },
             "description": "Ruta pública para consultar todos los clientes registrados."
           },
@@ -208,8 +223,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/personas/{{persona_id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["personas", "{{persona_id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "personas",
+                "{{persona_id}}"
+              ]
             },
             "description": "Ruta pública para consultar el detalle de una persona específica por su ID."
           },
@@ -237,12 +257,22 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"3205559988\",\n  \"direccion\": \"Avenida El Dorado # 68C-61, Bogotá D.C.\"\n}"
+              "raw": "{\n  \"telefono\": \"3205559988\",\n  \"direccion\": \"Avenida El Dorado # 68C-61, Bogotá D.C.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/personas/{{persona_id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["personas", "{{persona_id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "personas",
+                "{{persona_id}}"
+              ]
             },
             "description": "Actualiza campos específicos de la persona creada con protección JWT."
           },
@@ -259,14 +289,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.factura && jsonData.factura.id) {",
-                  "    pm.collectionVariables.set('factura_id', jsonData.factura.id);",
-                  "    console.log('Factura emitida con ID:', jsonData.factura.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
+                  "var jsonData = pm.response.json();\nif (jsonData.factura && jsonData.factura.id) {\n    pm.collectionVariables.set('factura_id', jsonData.factura.id);\n    console.log('Factura emitida con ID:', jsonData.factura.id);\n}"
+                ]
               }
             }
           ],
@@ -290,12 +316,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"persona_id\": {{persona_id}},\n  \"concepto\": \"Servicios Profesionales de Arquitectura e Infraestructura Cloud\",\n  \"subtotal\": 3500000\n}"
+              "raw": "{\n  \"persona_id\": {{persona_id}},\n  \"concepto\": \"Servicios Profesionales de Arquitectura e Infraestructura Cloud\",\n  \"subtotal\": 3500000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/facturas",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas"
+              ]
             },
             "description": "Calcula 100% dinámicamente los impuestos DIAN (IVA 19% = $665,000, 4x1000 = $14,000, Total = $4,179,000), genera número consecutivo SETP-XXXX y CUFE criptográfico en SHA-256."
           },
@@ -308,8 +343,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/facturas",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas"
+              ]
             },
             "description": "Consulta todas las facturas en base de datos haciendo un JOIN con la tabla de personas."
           },
@@ -322,8 +361,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/facturas/{{factura_id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas", "{{factura_id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas",
+                "{{factura_id}}"
+              ]
             },
             "description": "Detalle completo de la factura emitida incluyendo todos los datos del cliente y desglose impositivo."
           },
@@ -336,8 +380,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/facturas/{{factura_id}}/pdf",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas", "{{factura_id}}", "pdf"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas",
+                "{{factura_id}}",
+                "pdf"
+              ]
             },
             "description": "Genera el PDF en memoria con ReportLab y lo retorna directamente para visualización o guardado (en Postman hacer clic en 'Send and Download')."
           },
@@ -360,8 +410,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/facturas/{{factura_id}}/enviar-correo",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas", "{{factura_id}}", "enviar-correo"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas",
+                "{{factura_id}}",
+                "enviar-correo"
+              ]
             },
             "description": "Envía el correo a burnice.white2305@gmail.com con el PDF adjunto y cuerpo en HTML a través del servicio Gmail SMTP."
           },
@@ -384,14 +440,37 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/facturas/{{factura_id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["facturas", "{{factura_id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas",
+                "{{factura_id}}"
+              ]
             },
             "description": "Anula oficialmente la factura electrónica cambiando su estado a ANULADA en SQLite."
           },
           "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "persona_id",
+      "value": ""
+    },
+    {
+      "key": "factura_id",
+      "value": ""
     }
   ]
 }

@@ -1,7 +1,7 @@
 # Guía de Sustentación - API Facturación DIAN (Grupo 5)
 
-> **Materia:** Computación en la Nube (8vo Semestre)  
-> **Integrantes:** Nelson Felipe Gonzales, Daniel Alarcón, Gabriel Bastidas, Michelle Carolina Camargo  
+> **Materia:** Cloud Computing Para El Desarrollo De Software
+> **Integrantes:** Nelson Felipe Gonzales Gordillo, Daniel Esteban Alarcón Rojas, Gabriel Felipe Bastidas Alvarado, Michelt Carolina Camargo Cobo
 > **Proyecto:** API de Facturación Electrónica para Personas Naturales ante la DIAN  
 
 ---
