@@ -40,6 +40,9 @@ El servidor arrancará en `http://localhost:5000` e inicializará automáticamen
 python -m pytest tests/test_api_facturacion.py -v
 ```
 
+### 6. Pruebas interactivas con Postman
+Importe el archivo [`postman_collection.json`](postman_collection.json) directamente en Postman. Incluye todas las peticiones organizadas secuencialmente con scripts automáticos que gestionan el token JWT y las variables dinámicas de clientes y facturas.
+
 ---
 
 ## 📋 Endpoints de la API

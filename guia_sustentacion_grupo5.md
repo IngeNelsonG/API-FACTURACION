@@ -11,103 +11,90 @@
 | Criterio de Evaluación | Porcentaje | Cómo se cumple y demuestra en el código |
 | :--- | :---: | :--- |
 | **Base Común:** CRUD, JWT y Persistencia SQLite | **40%** | • Autenticación JWT en `POST /login` con decorador `@token_required`.<br>• CRUD completo del recurso `Persona Natural` (GET, POST, PUT, DELETE).<br>• Persistencia en SQLite (`facturacion.db`) con queries seguras parametrizadas (`?`).<br>• 10 pruebas automatizadas pasando al 100% en `pytest`. |
-| **Funcionalidad Especial:** DIAN, PDF y Correo | **30%** | • `POST /facturas`: Liquidación de impuestos colombianos (**IVA 19%** y **Gravamen Financiero 4x1000 = 0.4%**).<br>• Generación de **CUFE** (SHA-256) y numeración consecutiva `SETP-XXXX`.<br>• `GET /facturas/<id>/pdf`: Generación al vuelo de PDF profesional con ReportLab.<br>• `POST /facturas/<id>/enviar-correo`: Envío automático al adquiriente vía **Gmail SMTP** con el PDF adjunto.<br>• `DELETE /facturas/<id>`: Anulación oficial de factura. |
-| **Sustentación:** Preguntas de Código | **30%** | Respuestas claras y fundamentadas a las preguntas del profesor (ver Sección 3). |
+| **Funcionalidad Especial:** DIAN, PDF y Correo | **30%** | • `POST /facturas`: Liquidación 100% dinámica de impuestos colombianos (**IVA 19%** y **Gravamen Financiero 4x1000 = 0.4%**).<br>• Generación de **CUFE** (SHA-256) y numeración consecutiva `SETP-XXXX`.<br>• `GET /facturas/<id>/pdf`: Generación al vuelo de PDF profesional con ReportLab.<br>• `POST /facturas/<id>/enviar-correo`: Envío automático al adquiriente (**Burnice White**) vía **Gmail SMTP** con el PDF adjunto.<br>• `DELETE /facturas/<id>`: Anulación oficial de factura. |
+| **Sustentación:** Preguntas de Código | **30%** | Respuestas claras y fundamentadas a las preguntas del profesor (ver Sección 4). |
 
 ---
 
-## 2. Paso a Paso para la Demostración en Vivo
+## 2. Preparación Previa a la Sustentación
 
-### Paso 1: Iniciar el servidor
+### Paso 1: Iniciar el servidor API
+En la terminal del proyecto:
 ```powershell
 python app.py
 ```
-*El servidor arrancará en `http://localhost:5000` e inicializará automáticamente las tablas en SQLite.*
+*El servidor arrancará en `http://localhost:5000` e inicializará automáticamente la base de datos `facturacion.db`.*
 
-### Paso 2: Ejecutar las pruebas automatizadas
-Para demostrar la calidad y cobertura ante el profesor:
+### Paso 2: Demostrar cobertura de pruebas automatizadas
+Para impresionar al profesor antes de empezar:
 ```powershell
 python -m pytest tests/test_api_facturacion.py -v
 ```
-*(Demuestra 10 tests pasando en verde en menos de 2 segundos).*
+*(Demuestra 10 tests unitarios y de integración pasando en verde al 100% en menos de 3 segundos).*
 
 ---
 
-### Paso 3: Flujo de prueba en vivo
+## 3. Demostración en Vivo con Postman (Recomendado)
 
-> [!NOTE]
-> En **Windows PowerShell**, `curl` es un alias de `Invoke-WebRequest`. Recomendamos usar los comandos nativos de PowerShell (`Invoke-RestMethod`) mostrados abajo, o ejecutar `curl` desde **Git Bash**.
+En la raíz del proyecto se encuentra el archivo **`postman_collection.json`**.  
+Esta colección ya viene configurada con **variables dinámicas (`{{token}}`, `{{persona_id}}`, `{{factura_id}}`)** y scripts automáticos para que no tengas que copiar ni pegar nada a mano.
 
-#### Opción 1: En Windows PowerShell (Recomendado)
-
-**1. Probar ruta pública de salud:**
-```powershell
-Invoke-RestMethod -Uri http://localhost:5000/
-```
-
-**2. Probar protección de rutas (Intentar crear sin token → 401 Unauthorized):**
-```powershell
-Invoke-RestMethod -Uri http://localhost:5000/personas -Method Post -Body '{"nombre":"Hacker"}' -ContentType "application/json"
-```
-
-**3. Iniciar sesión y guardar el token JWT en una variable:**
-```powershell
-$login = Invoke-RestMethod -Uri http://localhost:5000/login -Method Post -Body '{"usuario":"profe","clave":"cloud2026"}' -ContentType "application/json"
-$headers = @{ Authorization = "Bearer $($login.token)" }
-$login
-```
-
-**4. Crear una Persona Natural (con el token):**
-```powershell
-$persona = @{
-    nombre = "Gabriel Bastidas"
-    rut = "1098765432-1"
-    cedula = "1098765432"
-    direccion = "Carrera 15 # 85-30, Bogota"
-    correo = "gabriel.bastidas@example.com"
-    telefono = "3159876543"
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri http://localhost:5000/personas -Method Post -Body $persona -ContentType "application/json; charset=utf-8" -Headers $headers
-```
-
-**5. Emitir Factura Electrónica con cálculo de tributos DIAN:**
-```powershell
-$factura = @{
-    persona_id = 1
-    concepto = "Servicios de Consultoria Cloud"
-    subtotal = 2000000
-} | ConvertTo-Json
-
-Invoke-RestMethod -Uri http://localhost:5000/facturas -Method Post -Body $factura -ContentType "application/json" -Headers $headers
-```
-
-**6. Descargar el PDF de la Factura:**
-Abrir en el navegador:
-`http://localhost:5000/facturas/1/pdf`
-
-**7. Enviar la Factura por Correo:**
-```powershell
-Invoke-RestMethod -Uri http://localhost:5000/facturas/1/enviar-correo -Method Post -Headers $headers
-```
+### ¿Cómo importar la colección en Postman?
+1. Abre **Postman**.
+2. Haz clic en el botón superior **Import** (o `Ctrl + O`).
+3. Arrastra o selecciona el archivo [`postman_collection.json`](file:///d:/U/OctavoSemestre/Cloud/proyecto-facturacion/API-FACTURACION/postman_collection.json).
+4. Verás la carpeta **"API Facturación DIAN - Grupo 5 (Cloud)"** con todas las peticiones organizadas secuencialmente.
 
 ---
 
-#### Opción 2: Con `curl` clásico (en Git Bash, Linux o Mac)
-```bash
-# 1. Login
-curl -X POST http://localhost:5000/login -H "Content-Type: application/json" -d '{"usuario":"profe","clave":"cloud2026"}'
+### Secuencia de Sustentación en Postman (Paso a Paso)
 
-# 2. Crear persona (con token)
-curl -X POST http://localhost:5000/personas -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre":"Gabriel","rut":"123","cedula":"123","direccion":"Calle 1","correo":"g@g.com","telefono":"300"}'
+#### Bloque 1: Presentación y Seguridad
+1. **`01. Salud y Metadatos de la API` (`GET /`):**
+   * Muestra el nombre del proyecto, la materia y los integrantes del Grupo 5.
+2. **`04. Intentar Crear Persona SIN Token (Esperar 401)` (`POST /personas`):**
+   * *Objetivo para el docente:* Demostrar que el decorador `@token_required` bloquea accesos no autorizados con código HTTP `401 Unauthorized`.
+3. **`02. Login Exitoso` (`POST /login`):**
+   * Envía `profe` y `cloud2026`.
+   * Recibe el token JWT con vigencia de 2 horas.
+   * *Magia de Postman:* El Test Script integrado guarda automáticamente el token en `{{token}}`.
 
-# 3. Emitir Factura DIAN
-curl -X POST http://localhost:5000/facturas -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"persona_id":1,"concepto":"Servicios","subtotal":2000000}'
-```
+#### Bloque 2: CRUD de Persona Natural (Cliente: Burnice White)
+4. **`05. Crear Persona Natural (Burnice White)` (`POST /personas`):**
+   * Crea a **Burnice White** con cédula `1098765432`, RUT `1098765432-1` y correo `burnice.white2305@gmail.com`.
+   * Responde `201 Created` y guarda automáticamente el ID en `{{persona_id}}`.
+5. **`06. Listar Todas las Personas Naturales` (`GET /personas`):**
+   * Muestra la lista completa en SQLite demostrando persistencia.
+6. **`07. Consultar Persona por ID` (`GET /personas/{{persona_id}}`):**
+   * Consulta el registro puntual del cliente creado.
+7. **`08. Actualizar Persona Natural` (`PUT /personas/{{persona_id}}`):**
+   * Actualiza teléfono y dirección demostrando el verbo `PUT`.
+
+#### Bloque 3: Facturación DIAN (Funcionalidad Especial)
+8. **`09. Emitir Factura DIAN para Burnice White` (`POST /facturas`):**
+   * Envía `persona_id`, concepto de servicios cloud y subtotal (`$ 3,500,000 COP`).
+   * *Explicar al profesor:*
+     * El cálculo es **100% dinámico** (no quemado):
+       * **Subtotal:** `$ 3,500,000.00`
+       * **IVA (19%):** `$ 665,000.00`
+       * **Gravamen 4x1000 (0.4%):** `$ 14,000.00`
+       * **TOTAL:** `$ 4,179,000.00 COP`
+     * Genera automáticamente el consecutivo `SETP-XXXX`.
+     * Genera el **CUFE** criptográfico único mediante **SHA-256**.
+9. **`10. Listar Facturas con Adquiriente (JOIN)` (`GET /facturas`):**
+   * Demuestra una consulta relacional SQL entre la tabla `facturas` y `personas`.
+10. **`12. Descargar PDF Oficial de la Factura` (`GET /facturas/{{factura_id}}/pdf`):**
+    * En Postman haz clic en la flecha al lado de *Send* y selecciona **"Send and Download"**, o abre la URL en tu navegador:
+      `http://localhost:5000/facturas/1/pdf`
+    * Verán el PDF con diseño profesional, tablas corporativas, desglose impositivo y código CUFE.
+11. **`13. Enviar Factura al Correo de Burnice White` (`POST /facturas/{{factura_id}}/enviar-correo`):**
+    * Despacha el correo con el PDF adjunto hacia `burnice.white2305@gmail.com` usando el servicio Gmail SMTP.
+12. **`14. Anular Factura Electrónica` (`DELETE /facturas/{{factura_id}}`):**
+    * Cambia el estado de la factura a `ANULADA` demostrando el verbo `DELETE`.
 
 ---
 
-## 3. Preguntas de Código que Hará el Profesor y Cómo Responderlas
+## 4. Preguntas de Código que Hará el Profesor y Cómo Responderlas
 
 ### Pregunta 1: "¿Por qué usaron Flask y no otro framework?"
 > **Respuesta:**  
@@ -117,9 +104,9 @@ curl -X POST http://localhost:5000/facturas -H "Authorization: Bearer <TOKEN>" -
 
 ### Pregunta 2: "¿Cómo funciona el decorador `@token_required` que protege los endpoints?"
 > **Respuesta:**  
-> "En `app.py`, `@token_required` es una función de orden superior decoradora. Envuelve a las funciones de los endpoints (`create_persona`, `create_factura`, etc.).  
-> Antes de que el endpoint se ejecute, el decorador extrae el encabezado `Authorization`. Si no viene o no empieza por `Bearer`, corta inmediatamente la petición devolviendo un código `401 Unauthorized`.  
-> Luego, mediante `jwt.decode(token, SECRET_KEY, algorithms=['HS256'])`, valida criptográficamente que el token no haya sido manipulado y que su fecha de expiración (`exp`) aún sea válida. Si la firma es correcta, permite que la petición continúe."
+> "En `app.py`, `@token_required` es una función decoradora de orden superior. Envuelve a las funciones de los endpoints (`create_persona`, `create_factura`, etc.).  
+> Antes de ejecutar la lógica de negocio, extrae el encabezado `Authorization`. Si no existe o no tiene el formato `Bearer <token>`, rechaza inmediatamente con `401 Unauthorized`.  
+> Luego, llama a `jwt.decode(token, SECRET_KEY, algorithms=['HS256'])` para verificar que la firma digital sea auténtica y que la fecha de expiración (`exp`) siga vigente. Si es válido, inyecta `request.usuario_actual` y permite la ejecución."
 
 ---
 
@@ -127,18 +114,20 @@ curl -X POST http://localhost:5000/facturas -H "Authorization: Bearer <TOKEN>" -
 > **Respuesta:**  
 > "Todas las consultas en `app.py` y `database.py` utilizan **consultas parametrizadas** con marcadores de posición `?`, por ejemplo:  
 > `cursor.execute('SELECT * FROM personas WHERE id = ?', (persona_id,))`.  
-> De esta forma, el motor de SQLite trata los parámetros estrictamente como datos literales y nunca como código SQL ejecutable, neutralizando cualquier intento de inyección SQL."
+> De esta forma, SQLite compila la estructura de la consulta antes de recibir los valores y trata cualquier entrada del usuario estrictamente como texto literal, neutralizando cualquier intento de inyección de código SQL."
 
 ---
 
-### Pregunta 4: "¿Cómo calcularon los impuestos de la DIAN y qué es el CUFE?"
+### Pregunta 4: "¿Los cálculos de impuestos y la generación de facturas son dinámicos o están quemados?"
 > **Respuesta:**  
-> "En `facturacion_servicio.py`, la función `calcular_impuestos()` aplica las tarifas vigentes en Colombia:  
-> 1. **IVA:** 19% sobre la base imponible (`subtotal * 0.19`).  
-> 2. **Gravamen a los Movimientos Financieros (4x1000):** 0.4% (`subtotal * 0.004`).  
-> 3. **Total:** Subtotal + IVA + 4x1000.  
-> 
-> El **CUFE** (Código Único de Facturación Electrónica) es la huella digital del documento. Se calcula aplicando el algoritmo hash **SHA-256** sobre la concatenación del número de factura, la fecha, los importes, el NIT del emisor, la cédula del cliente y una clave técnica. Si se llega a modificar un solo centavo de la factura, el CUFE cambia totalmente, garantizando la integridad."
+> "Son **100% dinámicos**. En `facturacion_servicio.py`:
+> 1. La función `calcular_impuestos(subtotal)` toma cualquier valor numérico recibido en el cuerpo JSON y aplica las fórmulas tributarias:
+>    * `iva = round(subtotal * 0.19, 2)` (19%)
+>    * `impuesto_4x1000 = round(subtotal * 0.004, 2)` (0.4%)
+>    * `total = round(subtotal + iva + impuesto_4x1000, 2)`
+> 2. El número consecutivo se calcula contando los registros existentes en SQLite (`SETP-{total:04d}`).
+> 3. El **CUFE** se genera en tiempo real aplicando el algoritmo criptográfico **SHA-256** sobre la cadena concatenada de número, fecha, subtotal, IVA, total, NIT emisor y cédula del adquiriente. Si cambia un solo dígito del subtotal o del cliente, el CUFE resultante es totalmente distinto.
+> 4. El PDF y el correo se arman al vuelo extrayendo los datos exactos del cliente y de la factura desde la base de datos."
 
 ---
 
@@ -151,7 +140,7 @@ curl -X POST http://localhost:5000/facturas -H "Authorization: Bearer <TOKEN>" -
 ### PREGUNTA DE ORO (Diapositiva 36):
 ### "¿Qué tendrían que cambiar para que 100 personas usaran su API al mismo tiempo?"
 > **Respuesta Modelo para 5.0:**  
-> "Actualmente, para desarrollo local usamos el servidor integrado de Flask (`app.run()`), el cual maneja peticiones de manera sincrónica y está diseñado para una sola persona. Además, **SQLite bloquea el archivo completo durante las operaciones de escritura** (`INSERT`, `UPDATE`), por lo que 100 usuarios escribiendo al tiempo colapsarían la base de datos.
+> "Actualmente, para desarrollo local usamos el servidor integrado de Flask (`app.run()`), el cual maneja peticiones de manera sincrónica y está diseñado para una sola persona. Además, **SQLite bloquea el archivo completo durante las operaciones de escritura** (`INSERT`, `UPDATE`), por lo que 100 usuarios escribiendo al tiempo colapsarían la base de datos con errores de `database is locked`.
 > 
 > Para soportar 100 usuarios concurrentes en producción en la Nube cambiaríamos 4 cosas:
 > 

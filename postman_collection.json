@@ -1,0 +1,397 @@
+{
+  "info": {
+    "_postman_id": "f5e937d2-7c8a-4d2b-9e4a-1a2b3c4d5e6f",
+    "name": "API Facturación DIAN - Grupo 5 (Cloud)",
+    "description": "Colección completa para pruebas y sustentación de la API de Facturación Electrónica DIAN para Personas Naturales.\nIncluye scripts automáticos para guardar el Token JWT, persona_id y factura_id de forma 100% dinámica.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "persona_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "factura_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Rutas Básicas",
+      "item": [
+        {
+          "name": "01. Salud y Metadatos de la API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Ruta pública que retorna la información general del proyecto, integrantes del Grupo 5 y resumen de endpoints."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Autenticación (JWT)",
+      "item": [
+        {
+          "name": "02. Login Exitoso (Guarda Token Automático)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    console.log('Token JWT guardado exitosamente en la colección:', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"cloud2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            },
+            "description": "Inicia sesión con credenciales válidas y mediante su Test Script guarda automáticamente el token en la variable {{token}} para las demás peticiones."
+          },
+          "response": []
+        },
+        {
+          "name": "03. Login Fallido (Credenciales Incorrectas -> 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"profe\",\n  \"clave\": \"clave_invalida\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["login"]
+            },
+            "description": "Demuestra el manejo de errores HTTP 401 Unauthorized ante credenciales no autorizadas."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03. CRUD Persona Natural",
+      "item": [
+        {
+          "name": "04. Intentar Crear Persona SIN Token (Esperar 401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Usuario No Autorizado\",\n  \"rut\": \"111-1\",\n  \"cedula\": \"111\",\n  \"direccion\": \"Calle Falsa 123\",\n  \"correo\": \"hacker@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/personas",
+              "host": ["{{baseUrl}}"],
+              "path": ["personas"]
+            },
+            "description": "Demuestra ante el profesor que las rutas de modificación están protegidas por @token_required."
+          },
+          "response": []
+        },
+        {
+          "name": "05. Crear Persona Natural (Burnice White)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('persona_id', jsonData.id);",
+                  "    console.log('ID de Burnice White guardado:', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Burnice White\",\n  \"rut\": \"1098765432-1\",\n  \"cedula\": \"1098765432\",\n  \"direccion\": \"Carrera 7 # 71-21, Bogotá D.C.\",\n  \"correo\": \"burnice.white2305@gmail.com\",\n  \"telefono\": \"3109876543\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/personas",
+              "host": ["{{baseUrl}}"],
+              "path": ["personas"]
+            },
+            "description": "Registra a Burnice White en la base de datos SQLite y guarda automáticamente su ID en {{persona_id}}."
+          },
+          "response": []
+        },
+        {
+          "name": "06. Listar Todas las Personas Naturales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/personas",
+              "host": ["{{baseUrl}}"],
+              "path": ["personas"]
+            },
+            "description": "Ruta pública para consultar todos los clientes registrados."
+          },
+          "response": []
+        },
+        {
+          "name": "07. Consultar Persona por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/personas/{{persona_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["personas", "{{persona_id}}"]
+            },
+            "description": "Ruta pública para consultar el detalle de una persona específica por su ID."
+          },
+          "response": []
+        },
+        {
+          "name": "08. Actualizar Persona Natural",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"3205559988\",\n  \"direccion\": \"Avenida El Dorado # 68C-61, Bogotá D.C.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/personas/{{persona_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["personas", "{{persona_id}}"]
+            },
+            "description": "Actualiza campos específicos de la persona creada con protección JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04. Facturación DIAN (Funcionalidad Especial)",
+      "item": [
+        {
+          "name": "09. Emitir Factura DIAN para Burnice White",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.factura && jsonData.factura.id) {",
+                  "    pm.collectionVariables.set('factura_id', jsonData.factura.id);",
+                  "    console.log('Factura emitida con ID:', jsonData.factura.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"persona_id\": {{persona_id}},\n  \"concepto\": \"Servicios Profesionales de Arquitectura e Infraestructura Cloud\",\n  \"subtotal\": 3500000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/facturas",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas"]
+            },
+            "description": "Calcula 100% dinámicamente los impuestos DIAN (IVA 19% = $665,000, 4x1000 = $14,000, Total = $4,179,000), genera número consecutivo SETP-XXXX y CUFE criptográfico en SHA-256."
+          },
+          "response": []
+        },
+        {
+          "name": "10. Listar Facturas con Adquiriente (JOIN)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas"]
+            },
+            "description": "Consulta todas las facturas en base de datos haciendo un JOIN con la tabla de personas."
+          },
+          "response": []
+        },
+        {
+          "name": "11. Consultar Detalle de Factura por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{factura_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{factura_id}}"]
+            },
+            "description": "Detalle completo de la factura emitida incluyendo todos los datos del cliente y desglose impositivo."
+          },
+          "response": []
+        },
+        {
+          "name": "12. Descargar PDF Oficial de la Factura",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{factura_id}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{factura_id}}", "pdf"]
+            },
+            "description": "Genera el PDF en memoria con ReportLab y lo retorna directamente para visualización o guardado (en Postman hacer clic en 'Send and Download')."
+          },
+          "response": []
+        },
+        {
+          "name": "13. Enviar Factura al Correo de Burnice White",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{factura_id}}/enviar-correo",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{factura_id}}", "enviar-correo"]
+            },
+            "description": "Envía el correo a burnice.white2305@gmail.com con el PDF adjunto y cuerpo en HTML a través del servicio Gmail SMTP."
+          },
+          "response": []
+        },
+        {
+          "name": "14. Anular Factura Electrónica (DELETE)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{factura_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{factura_id}}"]
+            },
+            "description": "Anula oficialmente la factura electrónica cambiando su estado a ANULADA en SQLite."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
