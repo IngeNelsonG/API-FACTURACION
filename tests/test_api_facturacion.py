@@ -48,13 +48,20 @@ def test_root_salud(client):
     assert "API de Facturación Electrónica DIAN" in data['proyecto']
     assert "Grupo 5" in data['grupo']
 
-def test_http_info(client):
-    """Verifica la ruta /http-info heredada de api-clase.txt."""
-    res = client.get('/http-info')
-    assert res.status_code == 200
-    data = res.get_json()
-    assert "2xx" in data
-    assert "4xx" in data
+def test_validacion_campos_factura(client):
+    """Verifica que emitir factura con datos inválidos o incompletos devuelva 400 Bad Request."""
+    token = obtener_token_valido(client)
+    headers = {'Authorization': f'Bearer {token}'}
+
+    # Petición sin subtotal
+    res_invalido = client.post('/facturas', json={'persona_id': 1, 'concepto': 'Prueba'}, headers=headers)
+    assert res_invalido.status_code == 400
+    assert 'error' in res_invalido.get_json()
+
+    # Petición con subtotal negativo o cero
+    res_negativo = client.post('/facturas', json={'persona_id': 1, 'concepto': 'Prueba', 'subtotal': -500}, headers=headers)
+    assert res_negativo.status_code == 400
+    assert 'error' in res_negativo.get_json()
 
 
 # =============================================================================

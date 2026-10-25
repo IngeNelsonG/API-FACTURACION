@@ -21,37 +21,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'clave-secreta-super-segura-cloud-2026-dian-grupo5')
 
 # -----------------------------------------------------------------------------
-# DICCIONARIO DE CÓDIGOS HTTP (Presente en api-clase.txt)
-# -----------------------------------------------------------------------------
-HTTP_STATUS_FAMILIES = {
-    "1xx": {
-        "category": "Informativos (Informational)",
-        "description": "La petición fue recibida y el servidor continúa procesando la información.",
-        "examples": [100, 101, 102]
-    },
-    "2xx": {
-        "category": "Éxito (Successful)",
-        "description": "La acción fue recibida, entendida, aceptada y procesada con éxito.",
-        "examples": [200, 201, 204]
-    },
-    "3xx": {
-        "category": "Redirección (Redirection)",
-        "description": "El cliente debe realizar acciones adicionales para completar la petición.",
-        "examples": [301, 302, 304]
-    },
-    "4xx": {
-        "category": "Errores del Cliente (Client Error)",
-        "description": "La petición contiene sintaxis incorrecta o no puede ser procesada por culpa del cliente.",
-        "examples": [400, 401, 403, 404]
-    },
-    "5xx": {
-        "category": "Errores del Servidor (Server Error)",
-        "description": "El servidor falló al intentar procesar una petición inicialmente válida.",
-        "examples": [500, 502, 503, 504]
-    }
-}
-
-# -----------------------------------------------------------------------------
 # DECORADOR DE AUTENTICACIÓN JWT (@token_required)
 # Exactamente según la Diapositiva 29 y 30 de la clase
 # -----------------------------------------------------------------------------
@@ -93,14 +62,9 @@ def root():
         "endpoints_principales": {
             "autenticacion": "POST /login",
             "crud_personas": "GET /personas, POST /personas, PUT /personas/<id>, DELETE /personas/<id>",
-            "facturacion_dian": "GET /facturas, POST /facturas, GET /facturas/<id>/pdf, POST /facturas/<id>/enviar-correo",
-            "http_info": "GET /http-info"
+            "facturacion_dian": "GET /facturas, POST /facturas, GET /facturas/<id>/pdf, POST /facturas/<id>/enviar-correo"
         }
     }), 200
-
-@app.route('/http-info')
-def get_http_info():
-    return jsonify(HTTP_STATUS_FAMILIES), 200
 
 # -----------------------------------------------------------------------------
 # AUTENTICACIÓN: LOGIN Y GENERACIÓN DE JWT

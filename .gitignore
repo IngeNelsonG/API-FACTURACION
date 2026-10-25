@@ -25,3 +25,9 @@ build/
 dist/
 var/
 *.db
+
+# Archivos de referencia de clase (no versionar en el repo)
+api-clase.txt
+caracterizacion_pruebas_API_Grupo5.docx
+Personaliza_tu_API_Slides.pdf
+ejemplo_factura.pdf

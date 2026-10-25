@@ -35,10 +35,9 @@ python -m pytest tests/test_api_facturacion.py -v
 
 ### Paso 3: Flujo de prueba en vivo (con curl o Postman)
 
-#### 1. Probar ruta pública de salud e información HTTP:
+#### 1. Probar ruta pública de salud e información de la API:
 ```bash
 curl http://localhost:5000/
-curl http://localhost:5000/http-info
 ```
 
 #### 2. Demostrar protección de rutas (Intentar crear sin token → 401 Unauthorized):
