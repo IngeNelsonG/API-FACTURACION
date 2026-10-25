@@ -20,7 +20,7 @@ python -m venv .venv
 
 ### 2. Instalar dependencias
 ```powershell
-pip install flask pyjwt reportlab pytest
+pip install -r requirements.txt
 ```
 
 ### 3. Configurar variables de entorno (Opcional)
