@@ -33,72 +33,76 @@ python -m pytest tests/test_api_facturacion.py -v
 
 ---
 
-### Paso 3: Flujo de prueba en vivo (con curl o Postman)
+### Paso 3: Flujo de prueba en vivo
 
-#### 1. Probar ruta pública de salud e información de la API:
-```bash
-curl http://localhost:5000/
+> [!NOTE]
+> En **Windows PowerShell**, `curl` es un alias de `Invoke-WebRequest`. Recomendamos usar los comandos nativos de PowerShell (`Invoke-RestMethod`) mostrados abajo, o ejecutar `curl` desde **Git Bash**.
+
+#### Opción 1: En Windows PowerShell (Recomendado)
+
+**1. Probar ruta pública de salud:**
+```powershell
+Invoke-RestMethod -Uri http://localhost:5000/
 ```
 
-#### 2. Demostrar protección de rutas (Intentar crear sin token → 401 Unauthorized):
-```bash
-curl -X POST http://localhost:5000/personas \
-  -H "Content-Type: application/json" \
-  -d '{"nombre": "Prueba Hacker", "cedula": "999"}'
+**2. Probar protección de rutas (Intentar crear sin token → 401 Unauthorized):**
+```powershell
+Invoke-RestMethod -Uri http://localhost:5000/personas -Method Post -Body '{"nombre":"Hacker"}' -ContentType "application/json"
 ```
-*Respuesta:* `401 Unauthorized` ("Falta el token de autorización").
 
-#### 3. Iniciar sesión y obtener el token JWT:
-```bash
-curl -X POST http://localhost:5000/login \
-  -H "Content-Type: application/json" \
-  -d '{"usuario": "profe", "clave": "cloud2026"}'
+**3. Iniciar sesión y guardar el token JWT en una variable:**
+```powershell
+$login = Invoke-RestMethod -Uri http://localhost:5000/login -Method Post -Body '{"usuario":"profe","clave":"cloud2026"}' -ContentType "application/json"
+$headers = @{ Authorization = "Bearer $($login.token)" }
+$login
 ```
-*Respuesta:* Recibe el token JWT firmado con HS256.
 
-#### 4. Crear una Persona Natural (con el token):
-```bash
-curl -X POST http://localhost:5000/personas \
-  -H "Authorization: Bearer <PEGAR_TOKEN_AQUI>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Gabriel Bastidas",
-    "rut": "1098765432-1",
-    "cedula": "1098765432",
-    "direccion": "Carrera 15 # 85-30, Bogotá",
-    "correo": "gabriel.bastidas@example.com",
-    "telefono": "3159876543"
-  }'
+**4. Crear una Persona Natural (con el token):**
+```powershell
+$persona = @{
+    nombre = "Gabriel Bastidas"
+    rut = "1098765432-1"
+    cedula = "1098765432"
+    direccion = "Carrera 15 # 85-30, Bogota"
+    correo = "gabriel.bastidas@example.com"
+    telefono = "3159876543"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:5000/personas -Method Post -Body $persona -ContentType "application/json; charset=utf-8" -Headers $headers
 ```
-*Respuesta:* `201 Created` con el ID generado.
 
-#### 5. Emitir Factura Electrónica con cálculo de tributos DIAN:
-```bash
-curl -X POST http://localhost:5000/facturas \
-  -H "Authorization: Bearer <PEGAR_TOKEN_AQUI>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "persona_id": 1,
-    "concepto": "Servicios de Consultoría e Infraestructura Cloud",
-    "subtotal": 2000000
-  }'
+**5. Emitir Factura Electrónica con cálculo de tributos DIAN:**
+```powershell
+$factura = @{
+    persona_id = 1
+    concepto = "Servicios de Consultoria Cloud"
+    subtotal = 2000000
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:5000/facturas -Method Post -Body $factura -ContentType "application/json" -Headers $headers
 ```
-*Respuesta:*
-- Subtotal: `$ 2,000,000.00`
-- IVA (19%): `$ 380,000.00`
-- 4x1000 (0.4%): `$ 8,000.00`
-- **Total:** `$ 2,388,000.00`
-- Número: `SETP-0001`
-- **CUFE:** Hash criptográfico único SHA-256.
 
-#### 6. Descargar el PDF de la Factura:
+**6. Descargar el PDF de la Factura:**
 Abrir en el navegador:
 `http://localhost:5000/facturas/1/pdf`
 
-#### 7. Enviar la Factura por Correo Electrónico:
+**7. Enviar la Factura por Correo:**
+```powershell
+Invoke-RestMethod -Uri http://localhost:5000/facturas/1/enviar-correo -Method Post -Headers $headers
+```
+
+---
+
+#### Opción 2: Con `curl` clásico (en Git Bash, Linux o Mac)
 ```bash
-curl -X POST http://localhost:5000/facturas/1/enviar-correo \
-  -H "Authorization: Bearer <PEGAR_TOKEN_AQUI>"
+# 1. Login
+curl -X POST http://localhost:5000/login -H "Content-Type: application/json" -d '{"usuario":"profe","clave":"cloud2026"}'
+
+# 2. Crear persona (con token)
+curl -X POST http://localhost:5000/personas -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"nombre":"Gabriel","rut":"123","cedula":"123","direccion":"Calle 1","correo":"g@g.com","telefono":"300"}'
+
+# 3. Emitir Factura DIAN
+curl -X POST http://localhost:5000/facturas -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"persona_id":1,"concepto":"Servicios","subtotal":2000000}'
 ```
 
 ---
