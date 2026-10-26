@@ -141,6 +141,15 @@ def test_crud_persona_natural_completo(client):
     assert res_list.status_code == 200
     assert len(res_list.get_json()) >= 2
 
+    # 5. Eliminar persona (DELETE protegido)
+    res_del = client.delete(f'/personas/{persona_id}', headers=headers)
+    assert res_del.status_code == 200
+    assert 'eliminada exitosamente' in res_del.get_json()['mensaje']
+
+    # 6. Confirmar eliminación (GET puntual debe responder 404)
+    res_verif = client.get(f'/personas/{persona_id}')
+    assert res_verif.status_code == 404
+
 
 # =============================================================================
 # 5. PRUEBAS DE FUNCIONALIDAD ESPECIAL: FACTURACIÓN DIAN
