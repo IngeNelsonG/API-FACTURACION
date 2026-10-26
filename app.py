@@ -32,7 +32,7 @@ from database import get_db, init_db
 from facturacion_servicio import calcular_impuestos, generar_cufe, generar_pdf_factura
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'clave-secreta-super-segura-cloud-2026-dian-grupo5')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 # -----------------------------------------------------------------------------
 # DECORADOR DE AUTENTICACIÓN JWT (@token_required)
