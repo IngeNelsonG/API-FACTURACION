@@ -9,6 +9,19 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 
+# Cargar variables de entorno desde .env si existe
+_env_file = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(_env_file):
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                _k = _k.strip()
+                _v = _v.strip().strip("'\"")
+                if _k and _k not in os.environ:
+                    os.environ[_k] = _v
+
 SMTP_HOST = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')
@@ -23,8 +36,13 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
     nombre_cliente = persona.get('nombre', 'Estimado(a) Cliente')
     total_formateado = f"${factura['total']:,.2f} COP"
 
+    smtp_host = os.getenv('SMTP_HOST', SMTP_HOST)
+    smtp_port = int(os.getenv('SMTP_PORT', SMTP_PORT))
+    smtp_email = os.getenv('SMTP_EMAIL', SMTP_EMAIL)
+    smtp_password = os.getenv('SMTP_PASSWORD', SMTP_PASSWORD)
+
     # Verificar si están configuradas las credenciales reales de Gmail
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
+    if not smtp_email or not smtp_password:
         return {
             "enviado": True,
             "modo": "simulado_pendiente_credenciales",
@@ -37,7 +55,7 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
 
     # Construir el mensaje MIME multipart
     msg = MIMEMultipart()
-    msg['From'] = f"Facturación DIAN <{SMTP_EMAIL}>"
+    msg['From'] = f"Facturación DIAN <{smtp_email}>"
     msg['To'] = destinatario
     msg['Subject'] = f"Factura Electrónica de Venta No. {numero_factura} - DIAN Colombia"
 
@@ -128,10 +146,10 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
 
     # Conectar y enviar vía Gmail SMTP
     try:
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
         server.starttls()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.sendmail(SMTP_EMAIL, [destinatario], msg.as_string())
+        server.login(smtp_email, smtp_password)
+        server.sendmail(smtp_email, [destinatario], msg.as_string())
         server.quit()
 
         return {

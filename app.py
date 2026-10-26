@@ -13,6 +13,19 @@ from functools import wraps
 from flask import Flask, jsonify, request, send_file
 import jwt
 
+# Cargar variables de entorno desde .env si existe
+_env_file = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(_env_file):
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                _k = _k.strip()
+                _v = _v.strip().strip("'\"")
+                if _k and _k not in os.environ:
+                    os.environ[_k] = _v
+
 from database import get_db, init_db
 from facturacion_servicio import calcular_impuestos, generar_cufe, generar_pdf_factura
 from correo_servicio import enviar_factura_correo
@@ -404,8 +417,26 @@ def enviar_correo(factura_id):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     init_db()
+
+    puerto = int(os.getenv('PORT', 5000))
+
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        puerto_ocupado = (s.connect_ex(('127.0.0.1', puerto)) == 0)
+
+    if puerto_ocupado and puerto == 5000:
+        print("\n" + "="*70)
+        print("⚠️  AVISO DE PUERTO EN MACOS:")
+        print("El puerto 5000 está ocupado por el 'Receptor de AirPlay' de macOS.")
+        print("Para liberar el puerto 5000 oficial, puedes desactivarlo en:")
+        print("  Ajustes del Sistema > General > AirDrop y AirPlay > Receptor AirPlay")
+        print("Iniciando automáticamente en puerto alternativo: http://localhost:5001")
+        print("="*70 + "\n")
+        puerto = 5001
+
     print("==============================================================")
     print("API DE FACTURACIÓN ELECTRÓNICA DIAN - GRUPO 5")
-    print("Servidor Flask iniciado en http://localhost:5000")
+    print(f"Servidor Flask iniciado en http://localhost:{puerto}")
+    print(f"Acceso en red local: http://0.0.0.0:{puerto}")
     print("==============================================================")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=puerto, debug=True)
