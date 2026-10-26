@@ -426,13 +426,6 @@ if __name__ == '__main__':
         puerto_ocupado = (s.connect_ex(('127.0.0.1', puerto)) == 0)
 
     if puerto_ocupado and puerto == 5000:
-        print("\n" + "="*70)
-        print("⚠️  AVISO DE PUERTO EN MACOS:")
-        print("El puerto 5000 está ocupado por el 'Receptor de AirPlay' de macOS.")
-        print("Para liberar el puerto 5000 oficial, puedes desactivarlo en:")
-        print("  Ajustes del Sistema > General > AirDrop y AirPlay > Receptor AirPlay")
-        print("Iniciando automáticamente en puerto alternativo: http://localhost:5001")
-        print("="*70 + "\n")
         puerto = 5001
 
     print("==============================================================")
