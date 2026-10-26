@@ -5,10 +5,18 @@ Implementa las reglas de cálculo de impuestos DIAN y renderizado de PDF profesi
 import hashlib
 import io
 from datetime import datetime
-from reportlab.lib.pagesizes import letter
+
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (
+    HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 # Constantes Tributarias DIAN para Personas Naturales
 NIT_EMISOR = "901234567-8"

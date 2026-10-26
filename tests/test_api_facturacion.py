@@ -5,8 +5,8 @@ Verifica los requisitos del proyecto:
 2. Funcionalidad especial (Cálculo de impuestos DIAN, CUFE, PDF y Correo)
 """
 import os
+
 import pytest
-import tempfile
 
 # Asegurar que las pruebas usen una base de datos temporal limpia y modo simulado para correo
 os.environ['DB_NAME'] = 'test_facturacion.db'
@@ -14,7 +14,8 @@ os.environ['SMTP_EMAIL'] = ''
 os.environ['SMTP_PASSWORD'] = ''
 
 from app import app
-from database import init_db, get_db
+from database import init_db
+
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_db():

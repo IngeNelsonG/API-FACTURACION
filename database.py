@@ -2,8 +2,8 @@
 database.py - Gestión de la Base de Datos SQLite
 Alineado con el contenido de la clase de Cloud (api-clase.txt)
 """
-import sqlite3
 import os
+import sqlite3
 
 DB_NAME = os.getenv('DB_NAME', 'facturacion.db')
 

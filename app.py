@@ -5,13 +5,14 @@ Proyecto Cloud - 8vo Semestre - Grupo 5
 Desarrollada sobre Flask + SQLite3 nativo + Autenticación JWT.
 Cumple con la estructura de clase y los requerimientos del documento de compromiso.
 """
-import os
-import io
 import datetime
+import io
+import os
 import sqlite3
 from functools import wraps
-from flask import Flask, jsonify, request, send_file
+
 import jwt
+from flask import Flask, jsonify, request, send_file
 
 # Cargar variables de entorno desde .env si existe
 _env_file = os.path.join(os.path.dirname(__file__), '.env')
@@ -26,9 +27,9 @@ if os.path.exists(_env_file):
                 if _k and _k not in os.environ:
                     os.environ[_k] = _v
 
+from correo_servicio import enviar_factura_correo
 from database import get_db, init_db
 from facturacion_servicio import calcular_impuestos, generar_cufe, generar_pdf_factura
-from correo_servicio import enviar_factura_correo
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'clave-secreta-super-segura-cloud-2026-dian-grupo5')
@@ -48,10 +49,10 @@ def token_required(f):
             # Soportar formato "Bearer <token>" o token directo
             token_limpio = token.replace('Bearer ', '').strip()
             payload = jwt.decode(token_limpio, app.config['SECRET_KEY'], algorithms=['HS256'])
-            request.usuario_actual = payload
+            setattr(request, 'usuario_actual', payload)
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'El token ha expirado. Por favor inicie sesión nuevamente'}), 401
-        except Exception:
+        except (jwt.PyJWTError, Exception):
             return jsonify({'error': 'Token inválido o firma alterada'}), 401
             
         return f(*args, **kwargs)
@@ -418,7 +419,7 @@ def enviar_correo(factura_id):
 if __name__ == '__main__':
     init_db()
 
-    puerto = int(os.getenv('PORT', 5000))
+    puerto = int(os.getenv('PORT', '5000'))
 
     import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

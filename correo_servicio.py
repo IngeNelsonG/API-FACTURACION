@@ -5,9 +5,9 @@ o simulación controlada si aún no se han configurado credenciales en el .env.
 """
 import os
 import smtplib
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 
 # Cargar variables de entorno desde .env si existe
 _env_file = os.path.join(os.path.dirname(__file__), '.env')
@@ -23,7 +23,7 @@ if os.path.exists(_env_file):
                     os.environ[_k] = _v
 
 SMTP_HOST = os.getenv('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
+SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
 SMTP_EMAIL = os.getenv('SMTP_EMAIL', '')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', '')
 
