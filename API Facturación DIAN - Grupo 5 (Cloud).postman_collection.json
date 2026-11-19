@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "24d48034-eef7-4349-8c4a-a42374f155d9",
     "name": "API Facturación DIAN - Grupo 5 (Cloud)",
-    "description": "Colección completa para pruebas y sustentación de la API de Facturación Electrónica DIAN para Personas Naturales.\nIncluye scripts automáticos para guardar el Token JWT, persona_id y factura_id de forma 100% dinámica.",
+    "description": "Colección completa para pruebas, despliegue y sustentación de la API de Facturación Electrónica DIAN para Personas Naturales (Alba - Grupo 5).\n\nCada petición documenta: método, ruta, propósito, autenticación, parámetros, cuerpo, respuesta de éxito y posibles códigos de error (400, 401, 403, 404, 409, 500).\n\nVariables incluidas:\n- `baseUrl`: Dirección base de la API (local: `http://localhost:5000`, nube Render: `https://<tu-api>.onrender.com`).\n- `token`: Token JWT guardado automáticamente tras ejecutar `02. Login Exitoso`.\n- `persona_id` y `factura_id`: IDs dinámicos guardados por los scripts de prueba.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "39449882"
   },
@@ -24,14 +24,48 @@
                 ""
               ]
             },
-            "description": "Ruta pública que retorna la información general del proyecto, integrantes del Grupo 5 y resumen de endpoints."
+            "description": "**Método:** `GET` | **Ruta:** `/`\n\n**Propósito:** Verifica disponibilidad de la API y retorna metadatos del proyecto, integrantes del Grupo 5 y resumen de endpoints.\n\n**Autenticación:** Pública (no requiere token).\n\n**Parámetros / Cuerpo:** Ninguno.\n\n**Respuesta de éxito (`200 OK`):** JSON con `proyecto`, `materia`, `grupo`, `integrantes` y `endpoints_principales`.\n\n**Errores:** Ninguno en operación normal (`500` solo ante falla inesperada del servidor)."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK - Metadatos",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"proyecto\": \"API de Facturación Electrónica DIAN - Personas Naturales\",\n  \"materia\": \"Cloud Computing Para El Desarrollo De Software\",\n  \"grupo\": \"Grupo 5\",\n  \"integrantes\": [\"Nelson Felipe Gonzales Gordillo\", \"Daniel Esteban Alarcón Rojas\", \"Gabriel Felipe Bastidas Alvarado\", \"Michelt Carolina Camargo Cobo\"],\n  \"endpoints_principales\": {\n    \"autenticacion\": \"POST /login, POST /registro\",\n    \"crud_personas\": \"GET /personas, POST /personas, PUT /personas/<id>, DELETE /personas/<id>\",\n    \"facturacion_dian\": \"GET /facturas, POST /facturas, PATCH /facturas/<id>/pagar, GET /facturas/<id>/pdf, POST /facturas/<id>/enviar-correo\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "01b. Healthcheck de Plataforma (/health)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "**Método:** `GET` | **Ruta:** `/health`\n\n**Propósito:** Endpoint liviano de healthcheck utilizado por Render / Docker para validar que el contenedor responde.\n\n**Autenticación:** Pública.\n\n**Parámetros / Cuerpo:** Ninguno.\n\n**Respuesta de éxito (`200 OK`):** `{\"status\": \"ok\"}`."
+          },
+          "response": [
+            {
+              "name": "200 OK - Health",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"ok\"\n}"
+            }
+          ]
         }
       ]
     },
     {
-      "name": "02. Autenticación (JWT)",
+      "name": "02. Autenticación (JWT) y Registro",
       "item": [
         {
           "name": "02. Login Exitoso (Guarda Token Automático)",
@@ -41,7 +75,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();\nif (jsonData.token) {\n    pm.collectionVariables.set('token', jsonData.token);\n    console.log('Token JWT guardado exitosamente en la colección:', jsonData.token);\n}"
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    console.log('Token JWT guardado exitosamente en la colección:', jsonData.token);",
+                  "}"
                 ]
               }
             }
@@ -72,9 +110,57 @@
                 "login"
               ]
             },
-            "description": "Inicia sesión con credenciales válidas y mediante su Test Script guarda automáticamente el token en la variable {{token}} para las demás peticiones."
+            "description": "**Método:** `POST` | **Ruta:** `/login`\n\n**Propósito:** Autentica al usuario (admin o cliente) y genera un token JWT HS256 con vigencia de 2 horas. Su Test Script guarda automáticamente `{{token}}`.\n\n**Autenticación:** Pública.\n\n**Cuerpo JSON requerido:** `usuario` (string), `clave` (string).\n\n**Respuesta de éxito (`200 OK`):** `{\"mensaje\", \"token\", \"usuario\", \"nombre\", \"rol\", \"persona_id\", \"expira\"}`.\n\n**Errores:**\n- `400 Bad Request`: Falta `usuario` o `clave`.\n- `401 Unauthorized`: Credenciales inválidas."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK - Login exitoso",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"mensaje\": \"Autenticación exitosa\",\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"usuario\": \"profe\",\n  \"nombre\": null,\n  \"rol\": \"admin\",\n  \"persona_id\": null,\n  \"expira\": \"2026-11-19T16:00:00+00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "02b. Registro de Nuevo Cliente (POST /registro)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"cliente.demo\",\n  \"clave\": \"claveSegura123\",\n  \"nombre\": \"María López Demo\",\n  \"cedula\": \"1099887766\",\n  \"rut\": \"1099887766-1\",\n  \"direccion\": \"Carrera 15 # 45-10, Tunja\",\n  \"correo\": \"maria.demo@example.com\",\n  \"telefono\": \"3112223344\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "registro"
+              ]
+            },
+            "description": "**Método:** `POST` | **Ruta:** `/registro`\n\n**Propósito:** Crea en una sola transacción una persona natural y su cuenta de usuario con rol `cliente` (clave hasheada con PBKDF2-SHA256) y `persona_id` vinculado para entity scoping.\n\n**Autenticación:** Pública.\n\n**Cuerpo JSON:** Obligatorios: `usuario` (3-30 chars `[A-Za-z0-9._-]`), `clave` (mín. 6 chars), `nombre`, `cedula`, `rut`, `direccion`, `correo`. Opcional: `telefono`.\n\n**Respuesta de éxito (`201 Created`):** `{\"mensaje\", \"usuario\", \"persona_id\"}`.\n\n**Errores:**\n- `400 Bad Request`: Campo obligatorio faltante, formato de usuario/correo inválido o clave menor a 6 caracteres.\n- `409 Conflict`: El usuario o la cédula ya existen."
+          },
+          "response": [
+            {
+              "name": "201 Created - Cliente registrado",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"mensaje\": \"Cuenta creada exitosamente. Ya puedes iniciar sesión.\",\n  \"usuario\": \"cliente.demo\",\n  \"persona_id\": 2\n}"
+            }
+          ]
         },
         {
           "name": "03. Login Fallido (Credenciales Incorrectas -> 401)",
@@ -104,7 +190,7 @@
                 "login"
               ]
             },
-            "description": "Demuestra el manejo de errores HTTP 401 Unauthorized ante credenciales no autorizadas."
+            "description": "**Método:** `POST` | **Ruta:** `/login`\n\n**Propósito:** Demuestra el manejo de error `401 Unauthorized` ante credenciales inválidas.\n\n**Autenticación:** Pública.\n\n**Respuesta esperada (`401 Unauthorized`):** `{\"error\": \"Credenciales inválidas. Verifique usuario y clave\"}`."
           },
           "response": []
         }
@@ -141,7 +227,7 @@
                 "personas"
               ]
             },
-            "description": "Demuestra ante el profesor que las rutas de modificación están protegidas por @token_required."
+            "description": "**Método:** `POST` | **Ruta:** `/personas`\n\n**Propósito:** Demuestra que las rutas protegidas rechazan peticiones sin encabezado `Authorization: Bearer {{token}}` con `401 Unauthorized`."
           },
           "response": []
         },
@@ -153,7 +239,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();\nif (jsonData.id) {\n    pm.collectionVariables.set('persona_id', jsonData.id);\n    console.log('ID de Burnice White guardado:', jsonData.id);\n}"
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('persona_id', jsonData.id);",
+                  "    console.log('ID de Burnice White guardado:', jsonData.id);",
+                  "}"
                 ]
               }
             }
@@ -194,7 +284,7 @@
                 "personas"
               ]
             },
-            "description": "Registra a Burnice White en la base de datos SQLite y guarda automáticamente su ID en {{persona_id}}."
+            "description": "**Método:** `POST` | **Ruta:** `/personas`\n\n**Propósito:** Registra una Persona Natural en la base de datos y guarda su ID en `{{persona_id}}`.\n\n**Autenticación:** Bearer JWT (`admin`/`facturador`).\n\n**Cuerpo JSON:** Obligatorios: `nombre`, `rut`, `cedula`, `direccion`, `correo`. Opcional: `telefono`.\n\n**Respuesta de éxito (`201 Created`):** Objeto completo de la persona creada.\n\n**Errores:**\n- `400 Bad Request`: Campo obligatorio ausente.\n- `401 Unauthorized`: Token ausente o inválido.\n- `403 Forbidden`: Un usuario con rol `cliente` no puede registrar otras personas.\n- `409 Conflict`: Ya existe una persona con esa cédula."
           },
           "response": []
         },
@@ -212,7 +302,7 @@
                 "personas"
               ]
             },
-            "description": "Ruta pública para consultar todos los clientes registrados."
+            "description": "**Método:** `GET` | **Ruta:** `/personas`\n\n**Propósito:** Lista todas las personas naturales registradas ordenadas de más reciente a más antigua.\n\n**Autenticación:** Pública.\n\n**Parámetros / Cuerpo:** Ninguno.\n\n**Respuesta de éxito (`200 OK`):** Arreglo JSON de objetos persona."
           },
           "response": []
         },
@@ -231,7 +321,7 @@
                 "{{persona_id}}"
               ]
             },
-            "description": "Ruta pública para consultar el detalle de una persona específica por su ID."
+            "description": "**Método:** `GET` | **Ruta:** `/personas/<persona_id>`\n\n**Propósito:** Consulta el detalle de una persona específica por ID.\n\n**Autenticación:** Pública.\n\n**Parámetros de ruta:** `persona_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** Objeto JSON de la persona.\n\n**Errores:** `404 Not Found` si no existe."
           },
           "response": []
         },
@@ -274,7 +364,7 @@
                 "{{persona_id}}"
               ]
             },
-            "description": "Actualiza campos específicos de la persona creada con protección JWT."
+            "description": "**Método:** `PUT` | **Ruta:** `/personas/<persona_id>`\n\n**Propósito:** Actualiza uno o varios campos de una persona natural.\n\n**Autenticación:** Bearer JWT (`admin` o dueño si es `cliente`).\n\n**Parámetros de ruta:** `persona_id` (entero).\n\n**Cuerpo JSON (campos opcionales):** `nombre`, `rut`, `cedula`, `direccion`, `correo`, `telefono`.\n\n**Respuesta de éxito (`200 OK`):** Persona actualizada.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden` (si `cliente` intenta editar otro ID), `404 Not Found`."
           },
           "response": []
         }
@@ -291,7 +381,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "var jsonData = pm.response.json();\nif (jsonData.factura && jsonData.factura.id) {\n    pm.collectionVariables.set('factura_id', jsonData.factura.id);\n    console.log('Factura emitida con ID:', jsonData.factura.id);\n}"
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.factura && jsonData.factura.id) {",
+                  "    pm.collectionVariables.set('factura_id', jsonData.factura.id);",
+                  "    console.log('Factura emitida con ID:', jsonData.factura.id);",
+                  "}"
                 ]
               }
             }
@@ -332,12 +426,20 @@
                 "facturas"
               ]
             },
-            "description": "Calcula 100% dinámicamente los impuestos DIAN (IVA 19% = $665,000, Total = $4,165,000; 4x1000 informativo = $16,660, no se suma), genera número consecutivo SETP-XXXX y CUFE criptográfico en SHA-256."
+            "description": "**Método:** `POST` | **Ruta:** `/facturas` (Funcionalidad Especial DIAN)\n\n**Propósito:** Liquida dinámicamente los impuestos colombianos (IVA 19% = $665,000, Total = $4,165,000; 4x1000 informativo = $16,660, no se suma), asigna consecutivo `SETP-XXXX` y calcula el CUFE SHA-256.\n\n**Autenticación:** Bearer JWT (`admin` o `cliente` solo para su propio `persona_id`).\n\n**Cuerpo JSON requerido:** `persona_id` (entero), `concepto` (string), `subtotal` (número > 0).\n\n**Respuesta de éxito (`201 Created`):** `{\"mensaje\", \"factura\", \"desglose_tributario\"}`.\n\n**Errores:**\n- `400 Bad Request`: Campos faltantes, `persona_id` o `subtotal` inválido/no positivo.\n- `401 Unauthorized`: Falta token o expiró.\n- `403 Forbidden`: Un `cliente` intenta emitir factura a nombre de otro cliente.\n- `404 Not Found`: La persona no existe."
           },
-          "response": []
+          "response": [
+            {
+              "name": "201 Created - Factura emitida",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"mensaje\": \"Factura electrónica emitida exitosamente ante la DIAN\",\n  \"factura\": {\n    \"id\": 1,\n    \"numero\": \"SETP-0001\",\n    \"persona_id\": 2,\n    \"concepto\": \"Servicios Profesionales de Arquitectura e Infraestructura Cloud\",\n    \"subtotal\": 3500000.0,\n    \"iva\": 665000.0,\n    \"impuesto_4x1000\": 16660.0,\n    \"total\": 4165000.0,\n    \"cufe\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n    \"estado\": \"EMITIDA\",\n    \"correo_enviado\": 0\n  },\n  \"desglose_tributario\": {\n    \"subtotal\": 3500000.0,\n    \"iva\": 665000.0,\n    \"total\": 4165000.0,\n    \"impuesto_4x1000\": 16660.0,\n    \"impuesto_4x1000_incluido_en_total\": false\n  }\n}"
+            }
+          ]
         },
         {
-          "name": "10. Listar Facturas con Adquiriente (JOIN)",
+          "name": "10. Listar Facturas con Adquiriente (JOIN + Scoping)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -360,7 +462,7 @@
                 "facturas"
               ]
             },
-            "description": "Consulta las facturas en base de datos haciendo un JOIN con la tabla de personas (con entity scoping por rol)."
+            "description": "**Método:** `GET` | **Ruta:** `/facturas`\n\n**Propósito:** Lista facturas haciendo `JOIN` con `personas`. Aplica **entity scoping**: un `admin` ve todas y un `cliente` ve únicamente sus propias facturas.\n\n**Autenticación:** Bearer JWT.\n\n**Respuesta de éxito (`200 OK`):** Arreglo JSON de facturas con `cliente_nombre`, `cliente_cedula` y `cliente_correo`.\n\n**Errores:** `401 Unauthorized` si falta el token."
           },
           "response": []
         },
@@ -389,7 +491,7 @@
                 "{{factura_id}}"
               ]
             },
-            "description": "Detalle completo de la factura emitida incluyendo todos los datos del cliente y desglose impositivo (403 si pertenece a otro cliente)."
+            "description": "**Método:** `GET` | **Ruta:** `/facturas/<factura_id>`\n\n**Propósito:** Detalle completo de la factura con datos del cliente y desglose tributario.\n\n**Autenticación:** Bearer JWT (con entity scoping).\n\n**Parámetros de ruta:** `factura_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** Objeto JSON de la factura.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden` (si un `cliente` consulta la factura de otro cliente), `404 Not Found`."
           },
           "response": []
         },
@@ -419,12 +521,12 @@
                 "pdf"
               ]
             },
-            "description": "Genera el PDF en memoria con ReportLab y lo retorna directamente para visualización o guardado (en Postman hacer clic en 'Send and Download')."
+            "description": "**Método:** `GET` | **Ruta:** `/facturas/<factura_id>/pdf` (Funcionalidad Especial)\n\n**Propósito:** Genera la representación gráfica en PDF en memoria con ReportLab (en Postman usar 'Send and Download').\n\n**Autenticación:** Bearer JWT (con entity scoping).\n\n**Parámetros de ruta:** `factura_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** Archivo binario `application/pdf`.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden` (factura de otro cliente), `404 Not Found`."
           },
           "response": []
         },
         {
-          "name": "13. Enviar Factura al Correo de Burnice White",
+          "name": "13. Enviar Factura al Correo del Cliente",
           "request": {
             "auth": {
               "type": "bearer",
@@ -449,7 +551,37 @@
                 "enviar-correo"
               ]
             },
-            "description": "Envía el correo a burnice.white2305@gmail.com con el PDF adjunto y cuerpo en HTML a través del servicio Gmail SMTP."
+            "description": "**Método:** `POST` | **Ruta:** `/facturas/<factura_id>/enviar-correo` (Funcionalidad Especial)\n\n**Propósito:** Envía correo HTML con el PDF adjunto al correo del cliente (vía Resend HTTPS en la nube, Gmail SMTP local o modo simulado si no hay credenciales).\n\n**Autenticación:** Bearer JWT (con entity scoping).\n\n**Parámetros de ruta:** `factura_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** `{\"enviado\": true, \"modo\", \"destinatario\", \"mensaje\"}`.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `500 Internal Server Error` (falla del proveedor de correo)."
+          },
+          "response": []
+        },
+        {
+          "name": "13b. Marcar Factura como Pagada (PATCH)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{factura_id}}/pagar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "facturas",
+                "{{factura_id}}",
+                "pagar"
+              ]
+            },
+            "description": "**Método:** `PATCH` | **Ruta:** `/facturas/<factura_id>/pagar`\n\n**Propósito:** Registra el pago cambiando el estado de `EMITIDA` a `PAGADA`.\n\n**Autenticación:** Bearer JWT (con entity scoping).\n\n**Parámetros de ruta:** `factura_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** `{\"mensaje\", \"factura\"}` con `estado: \"PAGADA\"`.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict` (si ya está pagada o anulada)."
           },
           "response": []
         },
@@ -478,7 +610,7 @@
                 "{{factura_id}}"
               ]
             },
-            "description": "Anula oficialmente la factura electrónica cambiando su estado a ANULADA en SQLite."
+            "description": "**Método:** `DELETE` | **Ruta:** `/facturas/<factura_id>`\n\n**Propósito:** Anula oficialmente la factura electrónica cambiando su estado a `ANULADA`.\n\n**Autenticación:** Bearer JWT (con entity scoping).\n\n**Parámetros de ruta:** `factura_id` (entero).\n\n**Respuesta de éxito (`200 OK`):** `{\"mensaje\": \"Factura No. SETP-XXXX anulada exitosamente\"}`.\n\n**Errores:** `401 Unauthorized`, `403 Forbidden`, `404 Not Found`."
           },
           "response": []
         }

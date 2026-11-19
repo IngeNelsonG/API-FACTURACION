@@ -3,8 +3,12 @@ correo_servicio.py - Envío de Factura por Correo Electrónico (Gmail SMTP)
 Permite enviar la factura electrónica con su PDF adjunto utilizando el servidor SMTP de Gmail
 o simulación controlada si aún no se han configurado credenciales en el .env.
 """
+import base64
+import json
 import os
 import smtplib
+import urllib.error
+import urllib.request
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -40,16 +44,18 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
     smtp_port = int(os.getenv('SMTP_PORT', SMTP_PORT))
     smtp_email = os.getenv('SMTP_EMAIL', SMTP_EMAIL)
     smtp_password = os.getenv('SMTP_PASSWORD', SMTP_PASSWORD)
+    resend_api_key = os.getenv('RESEND_API_KEY', '').strip()
+    resend_from = os.getenv('RESEND_FROM', 'Facturación DIAN <onboarding@resend.dev>').strip()
 
-    # Verificar si están configuradas las credenciales reales de Gmail
-    if not smtp_email or not smtp_password:
+    # Verificar si hay algún proveedor configurado (Resend HTTPS o Gmail SMTP)
+    if not resend_api_key and (not smtp_email or not smtp_password):
         return {
             "enviado": True,
             "modo": "simulado_pendiente_credenciales",
             "destinatario": destinatario,
             "mensaje": (
                 "Factura preparada con éxito y PDF adjunto generado. "
-                "Para despacho real por Gmail, configure SMTP_EMAIL y SMTP_PASSWORD en el archivo .env."
+                "Para despacho real configure RESEND_API_KEY (recomendado en Render) o SMTP_EMAIL/SMTP_PASSWORD."
             )
         }
 
@@ -138,7 +144,54 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
 
     msg.attach(MIMEText(cuerpo_html, 'html', 'utf-8'))
 
-    # Adjuntar el archivo PDF
+    # Opción 1 (HTTPS puerto 443, compatible con Render Free Tier): Resend API
+    if resend_api_key:
+        payload = {
+            "from": resend_from,
+            "to": [destinatario],
+            "subject": msg['Subject'],
+            "html": cuerpo_html,
+        }
+        if pdf_bytes:
+            payload["attachments"] = [{
+                "filename": f"Factura_{numero_factura}.pdf",
+                "content": base64.b64encode(pdf_bytes).decode('ascii'),
+            }]
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read()
+            return {
+                "enviado": True,
+                "modo": "resend_https_real",
+                "destinatario": destinatario,
+                "mensaje": f"Correo enviado exitosamente a {destinatario} con la factura {numero_factura} adjunta."
+            }
+        except urllib.error.HTTPError as e:
+            detalle = e.read().decode('utf-8', errors='replace')
+            return {
+                "enviado": False,
+                "modo": "error_resend",
+                "destinatario": destinatario,
+                "error": f"HTTP {e.code}: {detalle}"
+            }
+        except Exception as e:
+            return {
+                "enviado": False,
+                "modo": "error_resend",
+                "destinatario": destinatario,
+                "error": str(e)
+            }
+
+    # Opción 2: Adjuntar PDF y enviar vía Gmail SMTP
     if pdf_bytes:
         adjunto = MIMEApplication(pdf_bytes, _subtype="pdf")
         adjunto.add_header('Content-Disposition', 'attachment', filename=f"Factura_{numero_factura}.pdf")

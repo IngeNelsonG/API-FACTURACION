@@ -9,7 +9,6 @@ import datetime
 import io
 import os
 import re
-import sqlite3
 from functools import wraps
 
 import jwt
@@ -33,7 +32,7 @@ for _env_file in (os.path.join(_base_dir, '.env'), os.path.join(_base_dir, '..',
                         os.environ[_k] = _v
 
 from correo_servicio import enviar_factura_correo
-from database import get_db, init_db
+from database import IntegrityError, get_db, init_db
 from facturacion_servicio import calcular_impuestos, generar_cufe, generar_pdf_factura
 
 app = Flask(__name__)
@@ -42,10 +41,17 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-cambiar-en-pr
 
 # CORS: permite que el frontend React (Vite) consuma la API desde otro origen.
 # CORS_ORIGINS acepta varios orígenes separados por coma.
+def _normalizar_origen(origen):
+    origen = origen.strip().rstrip('/')
+    if origen and not origen.startswith(('http://', 'https://', 'r"')):
+        return f'https://{origen}'
+    return origen
+
+
 _cors_env = os.getenv('CORS_ORIGINS', '').strip()
 if _cors_env:
     # Producción / nube: solo los orígenes indicados en el .env
-    _cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+    _cors_origins = [_normalizar_origen(o) for o in _cors_env.split(',') if o.strip()]
 else:
     # Desarrollo: cualquier puerto en localhost, 127.0.0.1 o la red local (192.168.x.x).
     # Así no falla si Vite arranca en 5174 o si se abre el front por la IP del equipo.
@@ -231,7 +237,7 @@ def registro():
             VALUES (?, ?, ?, ?)
         ''', (usuario, generate_password_hash(clave, method='pbkdf2:sha256'), 'cliente', persona_id))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         conn.rollback()
         return jsonify({'error': 'El usuario o la cédula ya están registrados'}), 409
     finally:
@@ -303,7 +309,7 @@ def create_persona():
         persona_creada = cursor.execute('SELECT * FROM personas WHERE id = ?', (nuevo_id,)).fetchone()
         conn.close()
         return jsonify(dict(persona_creada)), 201
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         conn.close()
         return jsonify({'error': 'Ya existe una persona registrada con esa cédula'}), 409
 
@@ -359,8 +365,13 @@ def delete_persona(persona_id):
         conn.close()
         return jsonify({'error': f'Persona natural con ID {persona_id} no encontrada'}), 404
 
-    cursor.execute('DELETE FROM personas WHERE id = ?', (persona_id,))
-    conn.commit()
+    try:
+        cursor.execute('DELETE FROM personas WHERE id = ?', (persona_id,))
+        conn.commit()
+    except IntegrityError:
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': 'No se puede eliminar la persona porque tiene facturas asociadas'}), 409
     conn.close()
     return jsonify({'mensaje': f'Persona natural con ID {persona_id} eliminada exitosamente'}), 200
 
@@ -618,8 +629,15 @@ def enviar_correo(factura_id):
 # -----------------------------------------------------------------------------
 # INICIALIZACIÓN Y ARRANQUE
 # -----------------------------------------------------------------------------
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'}), 200
+
+
+# Inicializar tablas y datos semilla también al arrancar bajo Gunicorn
+init_db()
+
 if __name__ == '__main__':
-    init_db()
 
     puerto = int(os.getenv('PORT', '5000'))
 

@@ -2,9 +2,18 @@ import { loadSession, clearSession } from '@/utils/storage';
 
 /**
  * - En desarrollo (npm run dev): "/api", que Vite reenvía a Flask (ver vite.config.js).
- * - En producción (npm run build): VITE_API_URL, p. ej. la URL de la API en la nube.
+ * - En producción (npm run build): VITE_API_URL, p. ej. la URL HTTPS de la API en Render.
  */
-export const API_URL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_URL || '/api';
+function normalizarApiUrl(raw) {
+  const limpio = (raw || '').trim().replace(/\/+$/, '');
+  if (!limpio) return '/api';
+  if (limpio.startsWith('http://') || limpio.startsWith('https://') || limpio.startsWith('/')) {
+    return limpio;
+  }
+  return `https://${limpio}`;
+}
+
+export const API_URL = import.meta.env.DEV ? '/api' : normalizarApiUrl(import.meta.env.VITE_API_URL);
 
 /** Error con el status HTTP para poder reaccionar distinto a 400 / 401 / 500 */
 export class ApiError extends Error {
