@@ -17,6 +17,7 @@ os.environ['DB_NAME'] = 'test_facturacion.db'
 os.environ['SMTP_EMAIL'] = ''
 os.environ['SMTP_PASSWORD'] = ''
 os.environ['RESEND_API_KEY'] = ''
+os.environ['GMAIL_WEBHOOK_URL'] = ''
 
 from app import app
 from database import init_db

@@ -45,18 +45,20 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
     smtp_port = int(os.getenv('SMTP_PORT', SMTP_PORT))
     smtp_email = os.getenv('SMTP_EMAIL', SMTP_EMAIL)
     smtp_password = os.getenv('SMTP_PASSWORD', SMTP_PASSWORD)
+    gmail_webhook_url = os.getenv('GMAIL_WEBHOOK_URL', '').strip()
+    gmail_webhook_secret = os.getenv('GMAIL_WEBHOOK_SECRET', '').strip()
     resend_api_key = os.getenv('RESEND_API_KEY', '').strip()
     resend_from = os.getenv('RESEND_FROM', 'Facturación DIAN <onboarding@resend.dev>').strip()
 
-    # Verificar si hay algún proveedor configurado (Resend HTTPS o Gmail SMTP)
-    if not resend_api_key and (not smtp_email or not smtp_password):
+    # Verificar si hay algún proveedor configurado (Google Apps Script, Resend HTTPS o Gmail SMTP)
+    if not gmail_webhook_url and not resend_api_key and (not smtp_email or not smtp_password):
         return {
             "enviado": True,
             "modo": "simulado_pendiente_credenciales",
             "destinatario": destinatario,
             "mensaje": (
                 "Factura preparada con éxito y PDF adjunto generado. "
-                "Para despacho real configure RESEND_API_KEY (recomendado en Render) o SMTP_EMAIL/SMTP_PASSWORD."
+                "Para despacho real configure GMAIL_WEBHOOK_URL, RESEND_API_KEY o SMTP_EMAIL/SMTP_PASSWORD."
             )
         }
 
@@ -145,7 +147,54 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
 
     msg.attach(MIMEText(cuerpo_html, 'html', 'utf-8'))
 
-    # Opción 1 (HTTPS puerto 443, compatible con Render Free Tier): Resend API
+    # Opción 1 (HTTPS puerto 443, gratis desde tu propia cuenta Google sin dominio): Apps Script
+    if gmail_webhook_url:
+        payload = {
+            "secret": gmail_webhook_secret,
+            "to": destinatario,
+            "subject": msg['Subject'],
+            "html": cuerpo_html,
+            "filename": f"Factura_{numero_factura}.pdf",
+            "pdf_base64": base64.b64encode(pdf_bytes).decode('ascii') if pdf_bytes else "",
+        }
+        req = urllib.request.Request(
+            gmail_webhook_url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "AlbaFacturacion/1.0",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                cuerpo_resp = resp.read().decode('utf-8', errors='replace')
+            try:
+                resp_json = json.loads(cuerpo_resp)
+                if resp_json.get('ok') is False:
+                    return {
+                        "enviado": False,
+                        "modo": "error_gmail_webhook",
+                        "destinatario": destinatario,
+                        "error": resp_json.get('error', 'Error en Google Apps Script')
+                    }
+            except ValueError:
+                pass
+            return {
+                "enviado": True,
+                "modo": "gmail_https_apps_script",
+                "destinatario": destinatario,
+                "mensaje": f"Correo enviado exitosamente desde Gmail a {destinatario} con la factura {numero_factura} adjunta."
+            }
+        except Exception as e:
+            return {
+                "enviado": False,
+                "modo": "error_gmail_webhook",
+                "destinatario": destinatario,
+                "error": str(e)
+            }
+
+    # Opción 2 (HTTPS puerto 443, compatible con Render Free Tier): Resend API
     if resend_api_key:
         payload = {
             "from": resend_from,
