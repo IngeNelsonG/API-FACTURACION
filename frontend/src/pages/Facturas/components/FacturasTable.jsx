@@ -8,11 +8,10 @@ import {
   ShareIcon,
   XIcon,
 } from '@/components/icons';
-import { urlPdfFactura } from '@/api/facturasService';
 import { formatCOP, formatFecha } from '@/utils/format';
 import styles from './FacturasTable.module.css';
 
-export default function FacturasTable({ facturas, loading, error, vacio, onVer, onEnviar, onPagar, onAnular }) {
+export default function FacturasTable({ facturas, loading, error, vacio, onVer, onDescargar, onEnviar, onPagar, onAnular }) {
   return (
     <div className={styles.wrap}>
       <table className={styles.table}>
@@ -46,16 +45,15 @@ export default function FacturasTable({ facturas, loading, error, vacio, onVer, 
                     <button className={styles.iconBtn} onClick={() => onVer(f)} title="Ver detalle" aria-label={`Ver ${f.numero}`}>
                       <EyeOpenIcon width={20} height={20} />
                     </button>
-                    <a
-                      href={urlPdfFactura(f.id)}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
                       className={styles.iconBtn}
+                      onClick={() => onDescargar(f)}
                       title="Descargar PDF"
                       aria-label={`Descargar PDF de ${f.numero}`}
                     >
                       <DownloadIcon width={20} height={20} />
-                    </a>
+                    </button>
                     <button
                       className={styles.iconBtn}
                       onClick={() => onEnviar(f)}

@@ -4,6 +4,7 @@ import {
   pagarFactura,
   anularFactura,
   enviarFacturaCorreo,
+  descargarPdfFactura,
 } from '@/api/facturasService';
 
 /**
@@ -64,5 +65,13 @@ export function useFacturas() {
 
   const enviarCorreo = useCallback((f) => ejecutar(enviarFacturaCorreo, f), [ejecutar]);
 
-  return { facturas, loading, error, aviso, setAviso, recargar, pagar, anular, enviarCorreo };
+  const descargarPdf = useCallback(async (f) => {
+    try {
+      await descargarPdfFactura(f);
+    } catch (e) {
+      setAviso({ tipo: 'error', texto: e.message });
+    }
+  }, []);
+
+  return { facturas, loading, error, aviso, setAviso, recargar, pagar, anular, enviarCorreo, descargarPdf };
 }

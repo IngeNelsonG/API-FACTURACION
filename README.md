@@ -74,13 +74,13 @@ Abre `http://localhost:5173` e inicia sesión con `profe` / `cloud2026`. La API 
 ### 3. Facturación DIAN (Funcionalidad Especial)
 | Método | Ruta | Acceso | Descripción |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/facturas` | Público | Lista todas las facturas emitidas con datos del cliente |
-| `GET` | `/facturas/<id>` | Público | Consulta detalle de factura por ID |
+| `GET` | `/facturas` | **Protegido** | Lista facturas con datos del cliente (clientes ven solo las propias) |
+| `GET` | `/facturas/<id>` | **Protegido** | Consulta detalle de factura por ID (`403` si pertenece a otro cliente) |
 | `POST` | `/facturas` | **Protegido** | Emite factura: total = subtotal + **IVA 19%**; informa el **4x1000** (0.4% del total) que retendrá el banco, sin sumarlo; genera consecutivo `SETP-XXXX` y **CUFE** SHA-256 |
-| `DELETE` | `/facturas/<id>` | **Protegido** | Anula una factura electrónica emitida |
-| `PATCH` | `/facturas/<id>/pagar` | **Protegido** | Marca una factura emitida como **PAGADA** (409 si está anulada o ya pagada) |
-| `GET` | `/facturas/<id>/pdf` | Público | Descarga en memoria la representación gráfica en **PDF oficial** |
-| `POST` | `/facturas/<id>/enviar-correo` | **Protegido** | Envía la factura al correo del cliente vía **Gmail SMTP** con el PDF adjunto |
+| `DELETE` | `/facturas/<id>` | **Protegido** | Anula una factura electrónica emitida (`403` si pertenece a otro cliente) |
+| `PATCH` | `/facturas/<id>/pagar` | **Protegido** | Marca una factura emitida como **PAGADA** (409 si está anulada o ya pagada; `403` si es de otro cliente) |
+| `GET` | `/facturas/<id>/pdf` | **Protegido** | Descarga en memoria la representación gráfica en **PDF oficial** (`403` si pertenece a otro cliente) |
+| `POST` | `/facturas/<id>/enviar-correo` | **Protegido** | Envía la factura al correo del cliente vía **Gmail SMTP** con el PDF adjunto (`403` si es de otro cliente) |
 
 ---
 

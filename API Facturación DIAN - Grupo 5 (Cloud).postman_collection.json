@@ -339,6 +339,16 @@
         {
           "name": "10. Listar Facturas con Adquiriente (JOIN)",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -350,13 +360,23 @@
                 "facturas"
               ]
             },
-            "description": "Consulta todas las facturas en base de datos haciendo un JOIN con la tabla de personas."
+            "description": "Consulta las facturas en base de datos haciendo un JOIN con la tabla de personas (con entity scoping por rol)."
           },
           "response": []
         },
         {
           "name": "11. Consultar Detalle de Factura por ID",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -369,13 +389,23 @@
                 "{{factura_id}}"
               ]
             },
-            "description": "Detalle completo de la factura emitida incluyendo todos los datos del cliente y desglose impositivo."
+            "description": "Detalle completo de la factura emitida incluyendo todos los datos del cliente y desglose impositivo (403 si pertenece a otro cliente)."
           },
           "response": []
         },
         {
           "name": "12. Descargar PDF Oficial de la Factura",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {

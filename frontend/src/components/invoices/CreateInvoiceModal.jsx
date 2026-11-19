@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Modal from '@/components/ui/Modal/Modal';
 import Button from '@/components/ui/Button/Button';
 import { ArrowRightIcon } from '@/components/icons';
+import { useAuth } from '@/hooks/useAuth';
 import { getPersonas } from '@/api/personasService';
 import { crearFactura } from '@/api/facturasService';
 import { formatCOP } from '@/utils/format';
@@ -12,6 +13,8 @@ import styles from './CreateInvoiceModal.module.css';
 const VACIO = { persona_id: '', concepto: '', subtotal: '' };
 
 export default function CreateInvoiceModal({ open, onClose, onCreated }) {
+  const { session } = useAuth();
+  const esCliente = session?.rol === 'cliente';
   const [personas, setPersonas] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [form, setForm] = useState(VACIO);
@@ -20,14 +23,21 @@ export default function CreateInvoiceModal({ open, onClose, onCreated }) {
 
   useEffect(() => {
     if (!open) return;
-    setForm(VACIO);
+    const personaPropia = esCliente && session?.persona_id ? String(session.persona_id) : '';
+    setForm({ ...VACIO, persona_id: personaPropia });
     setError('');
     setCargando(true);
     getPersonas()
-      .then(setPersonas)
+      .then((lista) => {
+        if (esCliente && session?.persona_id) {
+          setPersonas(lista.filter((p) => p.id === session.persona_id));
+        } else {
+          setPersonas(lista);
+        }
+      })
       .catch((e) => setError(e.message))
       .finally(() => setCargando(false));
-  }, [open]);
+  }, [open, esCliente, session?.persona_id]);
 
   const calc = useMemo(() => liquidar(form.subtotal), [form.subtotal]);
 
@@ -81,7 +91,7 @@ export default function CreateInvoiceModal({ open, onClose, onCreated }) {
               name="persona_id"
               value={form.persona_id}
               onChange={handleChange}
-              disabled={cargando}
+              disabled={cargando || esCliente}
             >
               <option value="">{cargando ? 'Cargando clientes…' : 'Selecciona un cliente'}</option>
               {personas.map((p) => (

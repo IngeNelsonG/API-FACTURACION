@@ -4,7 +4,7 @@ import styles from './FacturasFilters.module.css';
 export const FILTROS_VACIOS = { desde: '', hasta: '', estado: '', personaId: '' };
 
 /** Barra de filtros. Los cambios quedan en "borrador" hasta pulsar Buscar. */
-export default function FacturasFilters({ valores, personas, onChange, onBuscar, onLimpiar }) {
+export default function FacturasFilters({ valores, personas, mostrarCliente = true, onChange, onBuscar, onLimpiar }) {
   const set = (campo) => (e) => onChange({ ...valores, [campo]: e.target.value });
 
   return (
@@ -32,15 +32,19 @@ export default function FacturasFilters({ valores, personas, onChange, onBuscar,
         <option value="ANULADA">Anulada</option>
       </select>
 
-      <label className="sr-only" htmlFor="f-cliente">Cliente</label>
-      <select id="f-cliente" className={styles.control} value={valores.personaId} onChange={set('personaId')}>
-        <option value="">Todos los clientes</option>
-        {personas.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.nombre}
-          </option>
-        ))}
-      </select>
+      {mostrarCliente && (
+        <>
+          <label className="sr-only" htmlFor="f-cliente">Cliente</label>
+          <select id="f-cliente" className={styles.control} value={valores.personaId} onChange={set('personaId')}>
+            <option value="">Todos los clientes</option>
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
 
       <div className={styles.buttons}>
         <button type="button" className={styles.clear} onClick={onLimpiar}>

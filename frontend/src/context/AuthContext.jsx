@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
       usuario: data.usuario,
       nombre: data.nombre || null,
       rol: data.rol,
+      persona_id: data.persona_id ?? null,
       expira: data.expira,
     };
     saveSession(nueva);

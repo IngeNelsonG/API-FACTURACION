@@ -101,6 +101,35 @@ def root():
     }), 200
 
 # -----------------------------------------------------------------------------
+# HELPERS DE ENTITY SCOPING POR ROL (cliente vs admin/facturador)
+# -----------------------------------------------------------------------------
+def _usuario_actual():
+    return getattr(request, 'usuario_actual', None) or {}
+
+
+def _es_cliente():
+    return _usuario_actual().get('rol') == 'cliente'
+
+
+def _persona_id_cliente():
+    return _usuario_actual().get('persona_id')
+
+
+def _verificar_acceso_persona(persona_id_objetivo):
+    """
+    Asegura que un usuario con rol 'cliente' solo acceda a recursos de su
+    propia persona_id. Si intenta acceder a los de otro cliente, retorna 403.
+    """
+    if _es_cliente():
+        persona_propia = _persona_id_cliente()
+        if persona_propia is None or persona_propia != persona_id_objetivo:
+            return jsonify({
+                'error': 'Prohibido: no tiene permiso para acceder a los recursos de otro cliente'
+            }), 403
+    return None
+
+
+# -----------------------------------------------------------------------------
 # AUTENTICACIÓN: LOGIN Y GENERACIÓN DE JWT
 # -----------------------------------------------------------------------------
 def _clave_valida(clave_guardada, clave_recibida):
@@ -135,12 +164,13 @@ def login():
     conn.close()
 
     if usuario_encontrado and _clave_valida(usuario_encontrado['clave'], clave):
-        # Generar token JWT con vigencia de 2 horas
+        # Generar token JWT con vigencia de 2 horas (incluye persona_id para entity scoping)
         expiracion = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)
         token = jwt.encode({
             'id': usuario_encontrado['id'],
             'usuario': usuario_encontrado['usuario'],
             'rol': usuario_encontrado['rol'],
+            'persona_id': usuario_encontrado['persona_id'],
             'exp': expiracion
         }, app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -150,6 +180,7 @@ def login():
             'usuario': usuario_encontrado['usuario'],
             'nombre': usuario_encontrado['nombre'],
             'rol': usuario_encontrado['rol'],
+            'persona_id': usuario_encontrado['persona_id'],
             'expira': expiracion.isoformat()
         }), 200
 
@@ -243,6 +274,8 @@ def get_persona(persona_id):
 @app.route('/personas', methods=['POST'])
 @token_required
 def create_persona():
+    if _es_cliente():
+        return jsonify({'error': 'Prohibido: los clientes no pueden registrar otras personas'}), 403
     data = request.get_json() or {}
     
     # Validar campos obligatorios
@@ -278,6 +311,10 @@ def create_persona():
 @app.route('/personas/<int:persona_id>', methods=['PUT'])
 @token_required
 def update_persona(persona_id):
+    denegado = _verificar_acceso_persona(persona_id)
+    if denegado:
+        return denegado
+
     data = request.get_json() or {}
     conn = get_db()
     cursor = conn.cursor()
@@ -310,6 +347,10 @@ def update_persona(persona_id):
 @app.route('/personas/<int:persona_id>', methods=['DELETE'])
 @token_required
 def delete_persona(persona_id):
+    denegado = _verificar_acceso_persona(persona_id)
+    if denegado:
+        return denegado
+
     conn = get_db()
     cursor = conn.cursor()
 
@@ -328,26 +369,52 @@ def delete_persona(persona_id):
 # Cálculo de impuestos (IVA 19% + 4x1000 informativo), CUFE, PDF y envío de correo
 # =============================================================================
 
-# 1. GET /facturas (Público - lista todas las facturas con datos del cliente)
+def _obtener_factura_con_permiso(conn, factura_id, query=None):
+    """
+    Busca una factura por ID y valida el entity scoping del usuario actual.
+    Retorna (fila, None) o (None, respuesta_error) con 404 o 403.
+    """
+    sql = query or 'SELECT * FROM facturas WHERE id = ?'
+    fila = conn.execute(sql, (factura_id,)).fetchone()
+    if fila is None:
+        return None, (jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404)
+    denegado = _verificar_acceso_persona(fila['persona_id'])
+    if denegado:
+        return None, denegado
+    return fila, None
+
+
+# 1. GET /facturas (Protegido con @token_required + entity scoping por cliente)
 @app.route('/facturas', methods=['GET'])
+@token_required
 def get_facturas():
     conn = get_db()
     cursor = conn.cursor()
-    query = '''
+    base_query = '''
         SELECT f.*, p.nombre AS cliente_nombre, p.cedula AS cliente_cedula, p.correo AS cliente_correo
         FROM facturas f
         JOIN personas p ON f.persona_id = p.id
-        ORDER BY f.id DESC
     '''
-    filas = cursor.execute(query).fetchall()
+    if _es_cliente():
+        persona_id = _persona_id_cliente()
+        if persona_id is None:
+            conn.close()
+            return jsonify([]), 200
+        filas = cursor.execute(
+            f'{base_query} WHERE f.persona_id = ? ORDER BY f.id DESC',
+            (persona_id,),
+        ).fetchall()
+    else:
+        filas = cursor.execute(f'{base_query} ORDER BY f.id DESC').fetchall()
     conn.close()
     return jsonify([dict(f) for f in filas]), 200
 
-# 2. GET /facturas/<id> (Público - detalle de factura)
+
+# 2. GET /facturas/<id> (Protegido con @token_required + entity scoping 403)
 @app.route('/facturas/<int:factura_id>', methods=['GET'])
+@token_required
 def get_factura(factura_id):
     conn = get_db()
-    cursor = conn.cursor()
     query = '''
         SELECT f.*, p.nombre AS cliente_nombre, p.cedula AS cliente_cedula, p.rut AS cliente_rut,
                p.direccion AS cliente_direccion, p.correo AS cliente_correo, p.telefono AS cliente_telefono
@@ -355,12 +422,13 @@ def get_factura(factura_id):
         JOIN personas p ON f.persona_id = p.id
         WHERE f.id = ?
     '''
-    fila = cursor.execute(query, (factura_id,)).fetchone()
+    fila, error_resp = _obtener_factura_con_permiso(conn, factura_id, query=query)
     conn.close()
 
-    if fila is None:
-        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+    if error_resp:
+        return error_resp
     return jsonify(dict(fila)), 200
+
 
 # 3. POST /facturas (Protegido con @token_required - emisión y liquidación de factura)
 @app.route('/facturas', methods=['POST'])
@@ -375,20 +443,29 @@ def create_factura():
         return jsonify({'error': 'Debe enviar persona_id, concepto y subtotal'}), 400
 
     try:
+        persona_id_val = int(persona_id)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'El persona_id debe ser un número entero válido'}), 400
+
+    denegado = _verificar_acceso_persona(persona_id_val)
+    if denegado:
+        return denegado
+
+    try:
         subtotal_val = float(subtotal)
         if subtotal_val <= 0:
             return jsonify({'error': 'El subtotal debe ser un valor numérico positivo'}), 400
-    except ValueError:
+    except (TypeError, ValueError):
         return jsonify({'error': 'El subtotal debe ser un número válido'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
 
     # Validar que la persona exista en el sistema
-    persona = cursor.execute('SELECT * FROM personas WHERE id = ?', (persona_id,)).fetchone()
+    persona = cursor.execute('SELECT * FROM personas WHERE id = ?', (persona_id_val,)).fetchone()
     if persona is None:
         conn.close()
-        return jsonify({'error': f'La persona natural con ID {persona_id} no existe'}), 404
+        return jsonify({'error': f'La persona natural con ID {persona_id_val} no existe'}), 404
 
     # 1. Calcular tributos: IVA 19% (total = subtotal + IVA) y 4x1000 informativo
     calculos = calcular_impuestos(subtotal_val)
@@ -415,7 +492,7 @@ def create_factura():
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'EMITIDA')
     ''', (
         numero_factura,
-        persona_id,
+        persona_id_val,
         concepto,
         calculos['subtotal'],
         calculos['iva'],
@@ -434,6 +511,7 @@ def create_factura():
         'desglose_tributario': calculos
     }), 201
 
+
 # 4. DELETE /facturas/<id> (Protegido con @token_required - anulación de factura)
 @app.route('/facturas/<int:factura_id>', methods=['DELETE'])
 @token_required
@@ -441,15 +519,16 @@ def anular_factura(factura_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    fila = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
-    if fila is None:
+    fila, error_resp = _obtener_factura_con_permiso(conn, factura_id)
+    if error_resp:
         conn.close()
-        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+        return error_resp
 
     cursor.execute("UPDATE facturas SET estado = 'ANULADA' WHERE id = ?", (factura_id,))
     conn.commit()
     conn.close()
     return jsonify({'mensaje': f'Factura No. {fila["numero"]} anulada exitosamente'}), 200
+
 
 # 4.1 PATCH /facturas/<id>/pagar (Protegido - registra el pago de una factura)
 # Ciclo de vida: EMITIDA (pendiente de pago) -> PAGADA | EMITIDA -> ANULADA
@@ -459,10 +538,10 @@ def pagar_factura(factura_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    fila = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
-    if fila is None:
+    fila, error_resp = _obtener_factura_con_permiso(conn, factura_id)
+    if error_resp:
         conn.close()
-        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+        return error_resp
 
     if fila['estado'] == 'ANULADA':
         conn.close()
@@ -480,18 +559,18 @@ def pagar_factura(factura_id):
         'factura': dict(factura)
     }), 200
 
-# 5. GET /facturas/<id>/pdf (Público - descarga representación gráfica PDF)
+
+# 5. GET /facturas/<id>/pdf (Protegido con @token_required + entity scoping 403)
 @app.route('/facturas/<int:factura_id>/pdf', methods=['GET'])
+@token_required
 def descargar_pdf(factura_id):
     conn = get_db()
-    cursor = conn.cursor()
-    factura = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
-
-    if factura is None:
+    factura, error_resp = _obtener_factura_con_permiso(conn, factura_id)
+    if error_resp:
         conn.close()
-        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+        return error_resp
 
-    persona = cursor.execute('SELECT * FROM personas WHERE id = ?', (factura['persona_id'],)).fetchone()
+    persona = conn.execute('SELECT * FROM personas WHERE id = ?', (factura['persona_id'],)).fetchone()
     conn.close()
 
     # Generar el PDF profesional en memoria
@@ -504,17 +583,17 @@ def descargar_pdf(factura_id):
         download_name=f"Factura_{factura['numero']}.pdf"
     )
 
+
 # 6. POST /facturas/<id>/enviar-correo (Protegido con @token_required - envío al cliente)
 @app.route('/facturas/<int:factura_id>/enviar-correo', methods=['POST'])
 @token_required
 def enviar_correo(factura_id):
     conn = get_db()
     cursor = conn.cursor()
-    factura = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
-
-    if factura is None:
+    factura, error_resp = _obtener_factura_con_permiso(conn, factura_id)
+    if error_resp:
         conn.close()
-        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+        return error_resp
 
     persona = cursor.execute('SELECT * FROM personas WHERE id = ?', (factura['persona_id'],)).fetchone()
 

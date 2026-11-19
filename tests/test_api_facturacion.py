@@ -106,6 +106,11 @@ def test_endpoints_protegidos_sin_token(client):
     res_fac = client.post('/facturas', json={'persona_id': 1, 'subtotal': 50000})
     assert res_fac.status_code == 401
 
+    # Intentar listar o consultar facturas / PDF sin token
+    assert client.get('/facturas').status_code == 401
+    assert client.get('/facturas/1').status_code == 401
+    assert client.get('/facturas/1/pdf').status_code == 401
+
 
 # =============================================================================
 # 4. PRUEBAS CRUD DE PERSONA NATURAL (RECURSO PRINCIPAL)
@@ -199,7 +204,9 @@ def test_emision_factura_con_calculo_impuestos(client):
 
 def test_descargar_pdf_factura(client):
     """Verifica que el endpoint devuelva un PDF válido generado con ReportLab."""
-    res = client.get('/facturas/1/pdf')
+    token = obtener_token_valido(client)
+    headers = {'Authorization': f'Bearer {token}'}
+    res = client.get('/facturas/1/pdf', headers=headers)
     assert res.status_code == 200
     assert res.mimetype == 'application/pdf'
     assert res.data.startswith(b'%PDF-')  # Encabezado estándar de archivo PDF
@@ -240,5 +247,111 @@ def test_anulacion_factura(client):
     assert res.status_code == 200
     
     # Comprobar que en la base de datos el estado haya cambiado a ANULADA
-    res_get = client.get('/facturas/1')
+    res_get = client.get('/facturas/1', headers=headers)
     assert res_get.get_json()['estado'] == 'ANULADA'
+
+
+# =============================================================================
+# 6. PRUEBAS DE ENTITY SCOPING (AISLAMIENTO POR CLIENTE Y 403 FORBIDDEN)
+# =============================================================================
+def _registrar_y_loguear_cliente(client, usuario, cedula, correo):
+    """Registra un cliente via /registro y retorna (headers, persona_id)."""
+    res_reg = client.post('/registro', json={
+        'usuario': usuario,
+        'clave': 'claveSegura123',
+        'nombre': f'Nombre {usuario}',
+        'cedula': cedula,
+        'rut': f'{cedula}-1',
+        'direccion': 'Calle 10 # 20-30',
+        'correo': correo,
+        'telefono': '3001112233',
+    })
+    assert res_reg.status_code == 201
+    persona_id = res_reg.get_json()['persona_id']
+
+    res_login = client.post('/login', json={'usuario': usuario, 'clave': 'claveSegura123'})
+    assert res_login.status_code == 200
+    login_data = res_login.get_json()
+    assert login_data['rol'] == 'cliente'
+    assert login_data['persona_id'] == persona_id
+    return {'Authorization': f'Bearer {login_data["token"]}'}, persona_id
+
+
+def test_entity_scoping_cliente_solo_ve_sus_facturas_y_403_ajenas(client):
+    """
+    Verifica que un cliente:
+    - Solo liste sus propias facturas en GET /facturas
+    - Pueda ver, descargar PDF, pagar, enviar correo y anular sus propias facturas
+    - Reciba 403 Forbidden al intentar acceder o actuar sobre facturas de otro cliente
+    - El administrador ('profe') siga viendo las facturas de todos los clientes
+    """
+    headers_a, persona_a = _registrar_y_loguear_cliente(
+        client, 'cliente.uno', '1111222333', 'cliente.uno@example.com'
+    )
+    headers_b, persona_b = _registrar_y_loguear_cliente(
+        client, 'cliente.dos', '4444555666', 'cliente.dos@example.com'
+    )
+
+    # Cada cliente emite una factura para sí mismo
+    res_fa = client.post(
+        '/facturas',
+        json={'persona_id': persona_a, 'concepto': 'Servicio Cliente A', 'subtotal': 100000},
+        headers=headers_a,
+    )
+    assert res_fa.status_code == 201
+    factura_a_id = res_fa.get_json()['factura']['id']
+
+    res_fb = client.post(
+        '/facturas',
+        json={'persona_id': persona_b, 'concepto': 'Servicio Cliente B', 'subtotal': 200000},
+        headers=headers_b,
+    )
+    assert res_fb.status_code == 201
+    factura_b_id = res_fb.get_json()['factura']['id']
+
+    # GET /facturas solo retorna las del propio cliente
+    lista_a = client.get('/facturas', headers=headers_a)
+    assert lista_a.status_code == 200
+    ids_a = {f['id'] for f in lista_a.get_json()}
+    assert factura_a_id in ids_a
+    assert factura_b_id not in ids_a
+    assert all(f['persona_id'] == persona_a for f in lista_a.get_json())
+
+    lista_b = client.get('/facturas', headers=headers_b)
+    assert lista_b.status_code == 200
+    ids_b = {f['id'] for f in lista_b.get_json()}
+    assert factura_b_id in ids_b
+    assert factura_a_id not in ids_b
+
+    # Acceso a factura propia -> 200 OK
+    assert client.get(f'/facturas/{factura_a_id}', headers=headers_a).status_code == 200
+    assert client.get(f'/facturas/{factura_a_id}/pdf', headers=headers_a).status_code == 200
+    assert client.post(f'/facturas/{factura_a_id}/enviar-correo', headers=headers_a).status_code == 200
+    assert client.patch(f'/facturas/{factura_a_id}/pagar', headers=headers_a).status_code == 200
+
+    # Intento de acceder o modificar factura de OTRO cliente -> 403 Forbidden
+    assert client.get(f'/facturas/{factura_b_id}', headers=headers_a).status_code == 403
+    assert client.get(f'/facturas/{factura_b_id}/pdf', headers=headers_a).status_code == 403
+    assert client.patch(f'/facturas/{factura_b_id}/pagar', headers=headers_a).status_code == 403
+    assert client.post(f'/facturas/{factura_b_id}/enviar-correo', headers=headers_a).status_code == 403
+    assert client.delete(f'/facturas/{factura_b_id}', headers=headers_a).status_code == 403
+
+    # Intento de emitir factura a nombre de otro cliente -> 403 Forbidden
+    res_ajena = client.post(
+        '/facturas',
+        json={'persona_id': persona_b, 'concepto': 'Intento ajeno', 'subtotal': 50000},
+        headers=headers_a,
+    )
+    assert res_ajena.status_code == 403
+
+    # Intento de modificar o eliminar otro cliente en /personas -> 403 Forbidden
+    assert client.put(f'/personas/{persona_b}', json={'telefono': '000'}, headers=headers_a).status_code == 403
+    assert client.delete(f'/personas/{persona_b}', headers=headers_a).status_code == 403
+
+    # Admin ('profe') ve las facturas de ambos clientes sin restricción
+    admin_headers = {'Authorization': f'Bearer {obtener_token_valido(client)}'}
+    lista_admin = client.get('/facturas', headers=admin_headers)
+    assert lista_admin.status_code == 200
+    ids_admin = {f['id'] for f in lista_admin.get_json()}
+    assert {factura_a_id, factura_b_id}.issubset(ids_admin)
+    assert client.get(f'/facturas/{factura_b_id}', headers=admin_headers).status_code == 200

@@ -4,6 +4,7 @@ import { PlusIcon } from '@/components/icons';
 import CreateInvoiceModal from '@/components/invoices/CreateInvoiceModal';
 import Pagination from '@/components/ui/Pagination/Pagination';
 import Toast from '@/components/ui/Toast/Toast';
+import { useAuth } from '@/hooks/useAuth';
 import { useFacturas } from '@/hooks/useFacturas';
 import { getPersonas } from '@/api/personasService';
 import { parseFechaSqlite } from '@/utils/format';
@@ -18,9 +19,11 @@ const POR_PAGINA = 7;
 const fechaLocal = (f) => parseFechaSqlite(f.fecha_emision)?.toLocaleDateString('en-CA') ?? '';
 
 export default function FacturasPage() {
+  const { session } = useAuth();
   const { busqueda = '' } = useOutletContext() ?? {};
-  const { facturas, loading, error, aviso, setAviso, recargar, pagar, anular, enviarCorreo } =
+  const { facturas, loading, error, aviso, setAviso, recargar, pagar, anular, enviarCorreo, descargarPdf } =
     useFacturas();
+  const esCliente = session?.rol === 'cliente';
 
   const [personas, setPersonas] = useState([]);
   const [borrador, setBorrador] = useState(FILTROS_VACIOS); // lo que el usuario está editando
@@ -30,8 +33,12 @@ export default function FacturasPage() {
   const [creando, setCreando] = useState(false);
 
   useEffect(() => {
+    if (esCliente) {
+      setPersonas([]);
+      return;
+    }
     getPersonas().then(setPersonas).catch(() => setPersonas([]));
-  }, []);
+  }, [esCliente]);
 
   const filtradas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -92,6 +99,7 @@ export default function FacturasPage() {
       <FacturasFilters
         valores={borrador}
         personas={personas}
+        mostrarCliente={!esCliente}
         onChange={setBorrador}
         onBuscar={() => setFiltros(borrador)}
         onLimpiar={limpiar}
@@ -104,6 +112,7 @@ export default function FacturasPage() {
           error={error}
           vacio={hayFiltros ? 'No hay facturas que coincidan con los filtros' : 'Aún no has emitido facturas'}
           onVer={setDetalle}
+          onDescargar={descargarPdf}
           onEnviar={enviarCorreo}
           onPagar={pagar}
           onAnular={anular}
@@ -121,7 +130,12 @@ export default function FacturasPage() {
         )}
       </section>
 
-      <InvoiceDetailModal factura={detalleActual} onClose={() => setDetalle(null)} onEnviar={enviarCorreo} />
+      <InvoiceDetailModal
+        factura={detalleActual}
+        onClose={() => setDetalle(null)}
+        onEnviar={enviarCorreo}
+        onDescargar={descargarPdf}
+      />
       <CreateInvoiceModal open={creando} onClose={() => setCreando(false)} onCreated={handleCreada} />
       <Toast aviso={aviso} />
     </div>

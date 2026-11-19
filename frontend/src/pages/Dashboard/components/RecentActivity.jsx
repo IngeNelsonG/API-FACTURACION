@@ -9,11 +9,10 @@ import {
   MoreIcon,
   XIcon,
 } from '@/components/icons';
-import { urlPdfFactura } from '@/api/facturasService';
 import { formatCOP, formatFechaHora } from '@/utils/format';
 import styles from './RecentActivity.module.css';
 
-export default function RecentActivity({ facturas, loading, error, busqueda, onPagar, onAnular }) {
+export default function RecentActivity({ facturas, loading, error, busqueda, onPagar, onAnular, onDescargar }) {
   return (
     <section className={styles.card}>
       <header className={styles.header}>
@@ -59,16 +58,15 @@ export default function RecentActivity({ facturas, loading, error, busqueda, onP
                   </td>
                   <td>
                     <div className={styles.actions}>
-                      <a
-                        href={urlPdfFactura(f.id)}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
                         className={styles.iconBtn}
+                        onClick={() => onDescargar(f)}
                         aria-label={`Descargar PDF de ${f.numero}`}
                         title="Descargar PDF"
                       >
                         <DownloadIcon width={20} height={20} />
-                      </a>
+                      </button>
                       <RowMenu factura={f} onPagar={onPagar} onAnular={onAnular} />
                     </div>
                   </td>
