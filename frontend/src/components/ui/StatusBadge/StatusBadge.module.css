@@ -1,0 +1,46 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px 4px 5px;
+  border-radius: var(--radius-pill);
+  font-size: 0.84rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dot {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--status-dot-icon);
+}
+
+.paid {
+  color: var(--status-paid);
+  background: var(--status-paid-bg);
+}
+
+.paid .dot {
+  background: var(--status-paid);
+}
+
+.pending {
+  color: var(--status-pending);
+  background: var(--status-pending-bg);
+}
+
+.pending .dot {
+  background: var(--status-pending);
+}
+
+.void {
+  color: var(--status-void);
+  background: var(--status-void-bg);
+}
+
+.void .dot {
+  background: var(--status-void);
+}

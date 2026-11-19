@@ -43,6 +43,15 @@ python -m pytest tests/test_api_facturacion.py -v
 ### 6. Pruebas interactivas con Postman
 Importe el archivo `API Facturación DIAN - Grupo 5 (Cloud).postman_collection.json` directamente en Postman. Incluye todas las peticiones organizadas secuencialmente con scripts automáticos que gestionan el token JWT y las variables dinámicas de clientes y facturas.
 
+### 7. Frontend React (FacturaPro)
+```powershell
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+Abre `http://localhost:5173` e inicia sesión con `profe` / `cloud2026`. La API permite el origen del front mediante **CORS** (`CORS_ORIGINS` en el `.env`). Ver `frontend/README.md` para la estructura de carpetas.
+
 ---
 
 ## 📋 Endpoints de la API
@@ -67,8 +76,9 @@ Importe el archivo `API Facturación DIAN - Grupo 5 (Cloud).postman_collection.j
 | :--- | :--- | :--- | :--- |
 | `GET` | `/facturas` | Público | Lista todas las facturas emitidas con datos del cliente |
 | `GET` | `/facturas/<id>` | Público | Consulta detalle de factura por ID |
-| `POST` | `/facturas` | **Protegido** | Emite factura liquidando **IVA 19%**, **4x1000 (0.4%)**, genera consecutivo `SETP-XXXX` y **CUFE** SHA-256 |
+| `POST` | `/facturas` | **Protegido** | Emite factura: total = subtotal + **IVA 19%**; informa el **4x1000** (0.4% del total) que retendrá el banco, sin sumarlo; genera consecutivo `SETP-XXXX` y **CUFE** SHA-256 |
 | `DELETE` | `/facturas/<id>` | **Protegido** | Anula una factura electrónica emitida |
+| `PATCH` | `/facturas/<id>/pagar` | **Protegido** | Marca una factura emitida como **PAGADA** (409 si está anulada o ya pagada) |
 | `GET` | `/facturas/<id>/pdf` | Público | Descarga en memoria la representación gráfica en **PDF oficial** |
 | `POST` | `/facturas/<id>/enviar-correo` | **Protegido** | Envía la factura al correo del cliente vía **Gmail SMTP** con el PDF adjunto |
 

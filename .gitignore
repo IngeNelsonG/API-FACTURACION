@@ -31,3 +31,7 @@ api-clase.txt
 caracterizacion_pruebas_API_Grupo5.docx
 Personaliza_tu_API_Slides.pdf
 ejemplo_factura.pdf
+
+# Frontend (Node / Vite)
+node_modules/
+frontend/dist/

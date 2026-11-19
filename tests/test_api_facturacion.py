@@ -5,8 +5,12 @@ Verifica los requisitos del proyecto:
 2. Funcionalidad especial (Cálculo de impuestos DIAN, CUFE, PDF y Correo)
 """
 import os
+import sys
 
 import pytest
+
+# El código de la API vive en backend/: se agrega al path para poder importarlo
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backend'))
 
 # Asegurar que las pruebas usen una base de datos temporal limpia y modo simulado para correo
 os.environ['DB_NAME'] = 'test_facturacion.db'
@@ -162,8 +166,8 @@ def test_emision_factura_con_calculo_impuestos(client):
     Verifica el cálculo tributario de la DIAN:
     Subtotal: $100,000 COP
     IVA 19%: $19,000 COP
-    4x1000: $400 COP
-    Total: $119,400 COP
+    Total factura: $119,000 COP (subtotal + IVA)
+    4x1000 informativo: $476 COP (0.4% del total, lo retiene el banco; NO se suma)
     """
     token = obtener_token_valido(client)
     headers = {'Authorization': f'Bearer {token}'}
@@ -183,8 +187,10 @@ def test_emision_factura_con_calculo_impuestos(client):
     # Verificación de cálculos
     assert desglose['subtotal'] == 100000.0
     assert desglose['iva'] == 19000.0
-    assert desglose['impuesto_4x1000'] == 400.0
-    assert desglose['total'] == 119400.0
+    assert desglose['total'] == 119000.0
+    assert desglose['impuesto_4x1000'] == 476.0
+    assert desglose['impuesto_4x1000_incluido_en_total'] is False
+    assert factura['total'] == 119000.0
 
     # Verificación de datos de la DIAN
     assert factura['numero'].startswith('SETP-')
@@ -207,6 +213,23 @@ def test_enviar_correo_factura(client):
     assert res.status_code == 200
     data = res.get_json()
     assert data['enviado'] is True
+
+def test_pagar_factura(client):
+    """Verifica el flujo de pago: EMITIDA -> PAGADA, sin token 401 y doble pago 409."""
+    token = obtener_token_valido(client)
+    headers = {'Authorization': f'Bearer {token}'}
+
+    nueva = client.post('/facturas', json={'persona_id': 1, 'concepto': 'Pago test', 'subtotal': 50000}, headers=headers)
+    factura_id = nueva.get_json()['factura']['id']
+
+    assert client.patch(f'/facturas/{factura_id}/pagar').status_code == 401
+
+    res = client.patch(f'/facturas/{factura_id}/pagar', headers=headers)
+    assert res.status_code == 200
+    assert res.get_json()['factura']['estado'] == 'PAGADA'
+
+    assert client.patch(f'/facturas/{factura_id}/pagar', headers=headers).status_code == 409
+    assert client.patch('/facturas/9999/pagar', headers=headers).status_code == 404
 
 def test_anulacion_factura(client):
     """Verifica que una factura pueda ser anulada con DELETE protegido."""

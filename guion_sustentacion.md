@@ -80,20 +80,20 @@ graph LR
 * Abre el archivo **`facturacion_servicio.py`**:
   * **Líneas 20-37 (`calcular_impuestos`):** Muestra que los cálculos son **100% dinámicos** (nada quemado):
     * IVA (19%): `round(subtotal * 0.19, 2)`
-    * Gravamen 4x1000: `round(subtotal * 0.004, 2)`
-    * Total: `Subtotal + IVA + 4x1000`
+    * Total: `Subtotal + IVA`
+    * 4x1000 informativo: `round(total * 0.004, 2)` → lo retiene el banco al pagar (arts. 871-874 E.T.), no se suma a la factura
   * **Líneas 39-46 (`generar_cufe`):** Explica la fórmula del Código Único de Facturación Electrónica mediante el algoritmo hash criptográfico **SHA-256**, concatenando número, fecha/hora, importes, NIT emisor, cédula adquiriente y clave técnica.
 * Abre **`app.py` (Líneas 205-240):** Muestra la consulta relacional con `JOIN` entre `facturas` y `personas`.
-* Abre **`tests/test_api_facturacion.py`:** Muestra la suite de 10 pruebas unitarias y de integración.
+* Abre **`tests/test_api_facturacion.py`:** Muestra la suite de 11 pruebas unitarias y de integración.
 
 #### 2. 🧪 Demostración en Vivo:
 * **En la Terminal:** Ejecuta las pruebas automatizadas:
   ```powershell
   python -m pytest tests/test_api_facturacion.py -v
   ```
-  ➡️ **Muestra las 10 pruebas pasando en verde al 100% en ~2 segundos**.
+  ➡️ **Muestra las 11 pruebas pasando en verde al 100% en ~2 segundos**.
 * **En Postman:**
-  * **`09. Emitir Factura DIAN para Burnice White` (`POST /facturas`):** Envía un subtotal de $3,500,000 COP y muestra el desglose: IVA ($665,000), 4x1000 ($14,000), Total ($4,179,000), consecutivo `SETP-XXXX` y el CUFE de 64 caracteres.
+  * **`09. Emitir Factura DIAN para Burnice White` (`POST /facturas`):** Envía un subtotal de $3,500,000 COP y muestra el desglose: IVA ($665,000), Total ($4,165,000) y el 4x1000 informativo ($16,660, no sumado), consecutivo `SETP-XXXX` y el CUFE de 64 caracteres.
   * **`10. Listar Facturas con Adquiriente (JOIN)` (`GET /facturas`):** Muestra el listado de facturas vinculadas con el nombre y cédula del cliente.
   * **`11. Consultar Detalle de Factura por ID` (`GET /facturas/{{factura_id}}`):** Consulta puntual de la factura emitida.
 

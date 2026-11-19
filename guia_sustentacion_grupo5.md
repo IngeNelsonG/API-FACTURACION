@@ -10,8 +10,8 @@
 
 | Criterio de Evaluación | Porcentaje | Cómo se cumple y demuestra en el código |
 | :--- | :---: | :--- |
-| **Base Común:** CRUD, JWT y Persistencia SQLite | **40%** | • Autenticación JWT en `POST /login` con decorador `@token_required`.<br>• CRUD completo del recurso `Persona Natural` (GET, POST, PUT, DELETE).<br>• Persistencia en SQLite (`facturacion.db`) con queries seguras parametrizadas (`?`).<br>• 10 pruebas automatizadas pasando al 100% en `pytest`. |
-| **Funcionalidad Especial:** DIAN, PDF y Correo | **30%** | • `POST /facturas`: Liquidación 100% dinámica de impuestos colombianos (**IVA 19%** y **Gravamen Financiero 4x1000 = 0.4%**).<br>• Generación de **CUFE** (SHA-256) y numeración consecutiva `SETP-XXXX`.<br>• `GET /facturas/<id>/pdf`: Generación al vuelo de PDF profesional con ReportLab.<br>• `POST /facturas/<id>/enviar-correo`: Envío automático al adquiriente (**Burnice White**) vía **Gmail SMTP** con el PDF adjunto.<br>• `DELETE /facturas/<id>`: Anulación oficial de factura. |
+| **Base Común:** CRUD, JWT y Persistencia SQLite | **40%** | • Autenticación JWT en `POST /login` con decorador `@token_required`.<br>• CRUD completo del recurso `Persona Natural` (GET, POST, PUT, DELETE).<br>• Persistencia en SQLite (`facturacion.db`) con queries seguras parametrizadas (`?`).<br>• 11 pruebas automatizadas pasando al 100% en `pytest`. |
+| **Funcionalidad Especial:** DIAN, PDF y Correo | **30%** | • `POST /facturas`: Liquidación 100% dinámica de impuestos colombianos (**IVA 19%**; total = subtotal + IVA; **4x1000 informativo** = 0.4% del total, que retiene el banco al pagar y no se suma).<br>• Generación de **CUFE** (SHA-256) y numeración consecutiva `SETP-XXXX`.<br>• `GET /facturas/<id>/pdf`: Generación al vuelo de PDF profesional con ReportLab.<br>• `POST /facturas/<id>/enviar-correo`: Envío automático al adquiriente (**Burnice White**) vía **Gmail SMTP** con el PDF adjunto.<br>• `DELETE /facturas/<id>`: Anulación oficial de factura. |
 | **Sustentación:** Preguntas de Código | **30%** | Respuestas claras y fundamentadas a las preguntas del profesor (ver Sección 4). |
 
 ---
@@ -30,7 +30,7 @@ Para impresionar al profesor antes de empezar:
 ```powershell
 python -m pytest tests/test_api_facturacion.py -v
 ```
-*(Demuestra 10 tests unitarios y de integración pasando en verde al 100% en menos de 3 segundos).*
+*(Demuestra 11 tests unitarios y de integración pasando en verde al 100% en menos de 3 segundos).*
 
 ---
 
@@ -77,8 +77,8 @@ Esta colección ya viene configurada con **variables dinámicas (`{{token}}`, `{
      * El cálculo es **100% dinámico** (no quemado):
        * **Subtotal:** `$ 3,500,000.00`
        * **IVA (19%):** `$ 665,000.00`
-       * **Gravamen 4x1000 (0.4%):** `$ 14,000.00`
-       * **TOTAL:** `$ 4,179,000.00 COP`
+       * **TOTAL factura (subtotal + IVA):** `$ 4,165,000.00 COP`
+       * **4x1000 informativo (0.4% del total):** `$ 16,660.00` → lo retiene el banco al pagar, **no se suma** a la factura
      * Genera automáticamente el consecutivo `SETP-XXXX`.
      * Genera el **CUFE** criptográfico único mediante **SHA-256**.
 9. **`10. Listar Facturas con Adquiriente (JOIN)` (`GET /facturas`):**
@@ -123,8 +123,10 @@ Esta colección ya viene configurada con **variables dinámicas (`{{token}}`, `{
 > "Son **100% dinámicos**. En `facturacion_servicio.py`:
 > 1. La función `calcular_impuestos(subtotal)` toma cualquier valor numérico recibido en el cuerpo JSON y aplica las fórmulas tributarias:
 >    * `iva = round(subtotal * 0.19, 2)` (19%)
->    * `impuesto_4x1000 = round(subtotal * 0.004, 2)` (0.4%)
->    * `total = round(subtotal + iva + impuesto_4x1000, 2)`
+>    * `total = round(subtotal + iva, 2)`
+>    * `impuesto_4x1000 = round(total * 0.004, 2)` (0.4%, **informativo**)
+>
+>    El 4x1000 (GMF) no es un impuesto de la factura: según los arts. 871 a 874 del Estatuto Tributario, se causa cuando se retira o se mueve dinero de una cuenta bancaria, su base es el valor total de esa transacción y lo retiene el banco. Por eso lo calculamos sobre el total que se va a pagar y lo mostramos aparte, sin sumarlo.
 > 2. El número consecutivo se calcula contando los registros existentes en SQLite (`SETP-{total:04d}`).
 > 3. El **CUFE** se genera en tiempo real aplicando el algoritmo criptográfico **SHA-256** sobre la cadena concatenada de número, fecha, subtotal, IVA, total, NIT emisor y cédula del adquiriente. Si cambia un solo dígito del subtotal o del cliente, el CUFE resultante es totalmente distinto.
 > 4. El PDF y el correo se arman al vuelo extrayendo los datos exactos del cliente y de la factura desde la base de datos."

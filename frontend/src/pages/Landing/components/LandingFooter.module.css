@@ -1,0 +1,26 @@
+.footer {
+  padding: 10px 5.5% 28px;
+  text-align: center;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+}
+
+.brandRow::before,
+.brandRow::after {
+  content: '';
+  flex: 1;
+  max-width: 560px;
+  height: 1px;
+  background: #ead9e1;
+}
+
+.copy {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+}

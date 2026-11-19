@@ -1,0 +1,35 @@
+.toast {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 120;
+  max-width: 400px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: var(--toast-ok);
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+  animation: toastIn 220ms ease;
+}
+
+.error {
+  background: var(--color-primary-700);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (max-width: 560px) {
+  .toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none;
+  }
+}

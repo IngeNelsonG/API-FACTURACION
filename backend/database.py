@@ -36,6 +36,12 @@ def init_db():
         )
     ''')
 
+    # Migración: vincular cada usuario registrado con su persona (cliente).
+    # Se agrega la columna solo si la base ya existía sin ella.
+    columnas_usuarios = [c['name'] for c in cursor.execute('PRAGMA table_info(usuarios)').fetchall()]
+    if 'persona_id' not in columnas_usuarios:
+        cursor.execute('ALTER TABLE usuarios ADD COLUMN persona_id INTEGER REFERENCES personas (id)')
+
     # 2. Tabla de Personas Naturales (Recurso principal con más de 4 campos requeridos)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS personas (

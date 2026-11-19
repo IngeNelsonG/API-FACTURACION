@@ -332,7 +332,7 @@
                 "facturas"
               ]
             },
-            "description": "Calcula 100% dinámicamente los impuestos DIAN (IVA 19% = $665,000, 4x1000 = $14,000, Total = $4,179,000), genera número consecutivo SETP-XXXX y CUFE criptográfico en SHA-256."
+            "description": "Calcula 100% dinámicamente los impuestos DIAN (IVA 19% = $665,000, Total = $4,165,000; 4x1000 informativo = $16,660, no se suma), genera número consecutivo SETP-XXXX y CUFE criptográfico en SHA-256."
           },
           "response": []
         },

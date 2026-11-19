@@ -111,15 +111,15 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
                             <td>IVA (19%):</td>
                             <td class="valor">${factura['iva']:,.2f} COP</td>
                         </tr>
-                        <tr>
-                            <td>Gravamen 4x1000:</td>
-                            <td class="valor">${factura['impuesto_4x1000']:,.2f} COP</td>
-                        </tr>
                         <tr style="border-top: 2px solid #cbd5e0;">
                             <td style="padding-top: 10px; font-weight: bold; font-size: 15px;">TOTAL FACTURA:</td>
                             <td class="valor" style="padding-top: 10px; font-size: 16px; color: #2b6cb0;">{total_formateado}</td>
                         </tr>
                     </table>
+                    <p style="font-size: 12px; color: #666;">
+                        Al pagar desde una cuenta bancaria, el banco retendrá el 4x1000 (GMF) estimado en
+                        ${factura['impuesto_4x1000']:,.2f} COP. Este valor no hace parte del total de la factura.
+                    </p>
                 </div>
 
                 <p><b>CUFE (Código Único de Facturación Electrónica):</b></p>

@@ -1,0 +1,62 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--page-bg);
+  transition: background 200ms ease;
+}
+
+.main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Ondas decorativas de la esquina superior derecha (como el mockup) */
+.main::before,
+.main::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.main::before {
+  top: -120px;
+  right: -140px;
+  width: 520px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 70%, rgba(124, 200, 242, 0.35), transparent 60%);
+}
+
+.main::after {
+  top: 80px;
+  right: -60px;
+  width: 360px;
+  height: 120px;
+  border-radius: 60% 0 0 60%;
+  background: linear-gradient(120deg, transparent 20%, var(--color-primary-700) 70%);
+  transform: rotate(-22deg);
+  opacity: 0.9;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  padding: 8px 40px 40px;
+}
+
+@media (max-width: 1023px) {
+  .content {
+    padding: 8px 18px 32px;
+  }
+
+  .main::after {
+    display: none;
+  }
+}
+
+:global(:root[data-theme='oscuro']) .main::before {
+  opacity: 0.35;
+}

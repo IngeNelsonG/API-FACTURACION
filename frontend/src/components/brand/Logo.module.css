@@ -1,0 +1,115 @@
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.light {
+  color: #fff;
+}
+
+.dark {
+  color: var(--accent-text);
+}
+
+/* Todo en vinotinto (landing) */
+.brand {
+  color: var(--accent-text);
+}
+
+.brand .name {
+  color: var(--accent-text);
+}
+
+.brand .tagline {
+  color: var(--accent-text);
+}
+
+.mark {
+  flex-shrink: 0;
+}
+
+.name {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+}
+
+.dark .name {
+  color: var(--color-text);
+}
+
+/* Tagline con líneas a los lados, como en el logo */
+.tagline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  color: #b9dcf7;
+}
+
+.tagline::before,
+.tagline::after {
+  content: '';
+  width: 22px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.dark .tagline {
+  color: var(--accent-text);
+}
+
+/* Tamaños */
+.md {
+  gap: 14px;
+}
+
+.md .mark {
+  width: 70px;
+}
+
+.md .name {
+  font-size: 2.2rem;
+}
+
+.lg .mark {
+  width: 108px;
+}
+
+.lg .name {
+  font-size: 2.8rem;
+}
+
+.sm {
+  gap: 12px;
+}
+
+.sm .mark {
+  width: 50px;
+}
+
+.sm .name {
+  font-size: 1.45rem;
+}
+
+@media (max-width: 600px) {
+  .lg .mark {
+    width: 72px;
+  }
+
+  .lg .name {
+    font-size: 2.1rem;
+  }
+
+  .tagline {
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+  }
+}

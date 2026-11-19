@@ -1,0 +1,84 @@
+/* Tokens de diseño globales (paleta tomada del mockup) */
+:root {
+  --color-primary-900: #4a0b26;
+  --color-primary-800: #5e0d2f;
+  --color-primary-700: #7a1035;
+  --color-primary-600: #8f1640;
+  --color-primary-500: #a51d4c;
+  --color-accent: #7cc8f2;
+
+  --color-text: #13183a;
+  --color-text-muted: #4b5272;
+  --color-placeholder: #5c6380;
+  --color-surface: #ffffff;
+  --color-input-bg: #f3f4f8;
+  --color-border: #e1e3ec;
+  --color-error: #c62845;
+
+  /* Estados de factura (los usan StatusBadge, StatCard y el dashboard) */
+  --status-paid: #17663f;
+  --status-paid-bg: #dff1e7;
+  --status-pending: #1b2f6e;
+  --status-pending-bg: #e1e7f6;
+  --status-void: #4a4f5c;
+  --status-void-bg: #e4e5ea;
+  --color-blue-soft: #e5f3fc;
+  --color-blue-strong: #2d8fcf;
+  --font-script: 'Caveat', cursive;
+
+  /* Superficies del panel (cambian con el modo oscuro) */
+  --page-bg: #f8f7fb;
+  --surface: #ffffff;
+  --surface-muted: #f3f4f8;
+  --surface-hover: #f7f1f4;
+  --border-soft: #eceaf1;
+  --error-bg: #fdecef;
+  --accent-text: var(--color-primary-700); /* textos y bordes vinotinto */
+  --status-dot-icon: #ffffff;
+  --toast-ok: #17663f;
+
+  --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-pill: 999px;
+  --radius-lg: 18px;
+
+  --shadow-soft: 0 10px 30px rgba(74, 11, 38, 0.12);
+  --transition: 180ms ease;
+}
+
+/* ==========================================================================
+   MODO OSCURO
+   Se activa con <html data-theme="oscuro"> (lo pone AppLayout, solo en el panel:
+   Dashboard, Mis Facturas y Configuración). El index y el login siguen claros.
+   ========================================================================== */
+:root[data-theme='oscuro'] {
+  color-scheme: dark; /* selects, fechas y scrollbars nativos en oscuro */
+
+  --color-text: #ece9f2;
+  --color-text-muted: #aaa4b9;
+  --color-placeholder: #8d879c;
+  --color-surface: #1c1824;
+  --color-input-bg: #262130;
+  --color-border: #3a3346;
+  --color-error: #ff7f97;
+
+  --page-bg: #13101a;
+  --surface: #1c1824;
+  --surface-muted: #262130;
+  --surface-hover: #2b2436;
+  --border-soft: #2d2738;
+  --error-bg: #3a1622;
+  --accent-text: #f28fb4;
+
+  --status-paid: #7fe0a6;
+  --status-paid-bg: #173828;
+  --status-pending: #a9bdf6;
+  --status-pending-bg: #1f2a4c;
+  --status-void: #c5c8d3;
+  --status-void-bg: #2e2f37;
+  --status-dot-icon: #1c1824;
+  --color-blue-soft: #1b3045;
+  --color-blue-strong: #7cc8f2;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+}

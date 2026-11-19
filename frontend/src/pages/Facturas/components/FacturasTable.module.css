@@ -1,0 +1,156 @@
+.wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+.table th {
+  padding: 15px 14px;
+  background: var(--surface-muted);
+  color: var(--color-text);
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  border-radius: 14px 0 0 0;
+  padding-left: 22px;
+}
+
+.table th:last-child {
+  border-radius: 0 14px 0 0;
+}
+
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.table td:first-child {
+  padding-left: 22px;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr {
+  transition: background var(--transition);
+}
+
+.table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+.numero {
+  font-weight: 600;
+}
+
+.cliente {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.total {
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center !important;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--accent-text);
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 16px 34px rgba(30, 10, 40, 0.16);
+}
+
+.menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.menu button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.menu .danger {
+  color: var(--accent-text);
+}
+
+.empty {
+  padding: 40px 10px !important;
+  text-align: center;
+  color: var(--color-text-muted) !important;
+}
+
+.error {
+  color: var(--color-error) !important;
+}

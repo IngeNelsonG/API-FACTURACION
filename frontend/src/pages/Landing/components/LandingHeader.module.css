@@ -1,0 +1,114 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 5.5%;
+  transition: background var(--transition), box-shadow var(--transition), padding var(--transition);
+}
+
+.scrolled {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(74, 11, 38, 0.08);
+}
+
+.brand {
+  text-decoration: none;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 24px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-700);
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(122, 16, 53, 0.25);
+  transition: background var(--transition), transform var(--transition);
+}
+
+.cta:hover {
+  background: var(--color-primary-600);
+  transform: translateY(-1px);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.secondary {
+  white-space: nowrap;
+  height: 46px;
+  padding: 0 22px;
+  border: 2px solid var(--color-primary-700);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--color-primary-700);
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.secondary:hover {
+  background: var(--color-primary-700);
+  color: #fff;
+}
+
+@media (max-width: 560px) {
+  .actions {
+    gap: 6px;
+  }
+
+  /* Logo más compacto para que quepan los dos botones */
+  .header .brand svg {
+    width: 38px;
+  }
+
+  .header .brand p {
+    font-size: 1.45rem;
+  }
+
+  .header .brand > div {
+    gap: 8px;
+  }
+
+  .cta {
+    white-space: nowrap;
+  }
+
+  .cta svg {
+    display: none;
+  }
+
+  .secondary {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+  }
+
+  .header {
+    padding: 14px 18px;
+  }
+
+  .cta {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+  }
+}

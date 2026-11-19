@@ -1,0 +1,142 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.block h3 {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.block p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.summary {
+  margin: 0;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--surface-muted);
+}
+
+.summary div {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.93rem;
+}
+
+.summary dt {
+  color: var(--color-text-muted);
+}
+
+.summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.grand {
+  margin-top: 6px;
+  padding-top: 10px !important;
+  border-top: 1px dashed var(--color-border);
+  font-weight: 600;
+  font-size: 1.05rem !important;
+}
+
+.grand dt,
+.grand dd {
+  color: var(--accent-text) !important;
+}
+
+.note {
+  margin-top: 4px;
+  font-size: 0.82rem !important;
+}
+
+.note dt,
+.note dd {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.cufe {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  font-size: 0.78rem;
+  word-break: break-all;
+  color: var(--color-text);
+}
+
+.sent {
+  margin: 0;
+  color: var(--status-paid);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.secondary {
+  border: 1.5px solid var(--accent-text);
+  background: var(--surface);
+  color: var(--accent-text);
+}
+
+.secondary:hover {
+  background: var(--surface-hover);
+}
+
+.primary {
+  border: none;
+  background: var(--color-primary-700);
+  color: #fff;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-primary-600);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

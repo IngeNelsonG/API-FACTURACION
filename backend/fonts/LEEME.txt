@@ -1,0 +1,7 @@
+Tipografía Poppins (la misma del frontend Alba), usada en el PDF de la factura.
+
+Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+Distribuida bajo la SIL Open Font License, Version 1.1 (https://openfontlicense.org),
+que permite usarla, incluirla y redistribuirla junto con software.
+
+Si esta carpeta no existe, el PDF se genera igual usando Helvetica.

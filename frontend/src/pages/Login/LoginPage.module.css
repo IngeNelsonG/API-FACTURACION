@@ -1,0 +1,51 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  background:
+    radial-gradient(circle at 55% 45%, rgba(170, 40, 90, 0.45) 0, transparent 45%),
+    linear-gradient(135deg, #4f0826 0%, #6a0d30 40%, #7d1238 75%, #8a1742 100%);
+}
+
+.brand {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 62.5%;
+  padding: 15vh 4% 8vh 7%;
+}
+
+.formArea {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 37.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6vh 4% 6vh 2%;
+}
+
+/* ---------- Tablet / móvil: se apila y se oculta la ilustración ---------- */
+@media (max-width: 1023px) {
+  .page {
+    flex-direction: column;
+  }
+
+  .page > svg {
+    display: none;
+  }
+
+  .brand {
+    flex: none;
+    padding: 48px 24px 64px;
+  }
+
+  .formArea {
+    flex: 1;
+    align-items: flex-start;
+    margin-top: -32px;
+    padding: 40px 24px 48px;
+    background: var(--color-surface);
+    border-radius: 32px 32px 0 0;
+  }
+}

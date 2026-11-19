@@ -1,0 +1,94 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.field input,
+.field select {
+  height: 50px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.98rem;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.field input:focus,
+.field select:focus {
+  background: #fff;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 4px rgba(165, 29, 76, 0.12);
+}
+
+.summary {
+  margin: 4px 0 0;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #f7f5fa;
+}
+
+.summary div {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.93rem;
+}
+
+.summary dt {
+  color: var(--color-text-muted);
+}
+
+.summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.grand {
+  margin-top: 6px;
+  padding-top: 10px !important;
+  border-top: 1px dashed #d9d4e0;
+  font-weight: 600;
+  font-size: 1.05rem !important;
+}
+
+.grand dt,
+.grand dd {
+  color: var(--color-primary-700) !important;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdecef;
+  color: var(--color-error);
+  font-size: 0.9rem;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--color-primary-700);
+  font-weight: 600;
+}

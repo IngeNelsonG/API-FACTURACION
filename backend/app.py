@@ -8,31 +8,51 @@ Cumple con la estructura de clase y los requerimientos del documento de compromi
 import datetime
 import io
 import os
+import re
 import sqlite3
 from functools import wraps
 
 import jwt
 from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS
+from werkzeug.security import check_password_hash, generate_password_hash
 
-# Cargar variables de entorno desde .env si existe
-_env_file = os.path.join(os.path.dirname(__file__), '.env')
-if os.path.exists(_env_file):
-    with open(_env_file, 'r', encoding='utf-8') as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if _line and not _line.startswith('#') and '=' in _line:
-                _k, _v = _line.split('=', 1)
-                _k = _k.strip()
-                _v = _v.strip().strip("'\"")
-                if _k and _k not in os.environ:
-                    os.environ[_k] = _v
+# Cargar variables de entorno desde .env si existe.
+# Se busca primero en backend/ y luego en la raíz del proyecto (donde está el .env).
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+for _env_file in (os.path.join(_base_dir, '.env'), os.path.join(_base_dir, '..', '.env')):
+    if os.path.exists(_env_file):
+        with open(_env_file, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    _k = _k.strip()
+                    _v = _v.strip().strip("'\"")
+                    if _k and _k not in os.environ:
+                        os.environ[_k] = _v
 
 from correo_servicio import enviar_factura_correo
 from database import get_db, init_db
 from facturacion_servicio import calcular_impuestos, generar_cufe, generar_pdf_factura
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+# Valor por defecto solo para desarrollo/CI; en la nube SIEMPRE definir SECRET_KEY
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-cambiar-en-produccion')
+
+# CORS: permite que el frontend React (Vite) consuma la API desde otro origen.
+# CORS_ORIGINS acepta varios orígenes separados por coma.
+_cors_env = os.getenv('CORS_ORIGINS', '').strip()
+if _cors_env:
+    # Producción / nube: solo los orígenes indicados en el .env
+    _cors_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+else:
+    # Desarrollo: cualquier puerto en localhost, 127.0.0.1 o la red local (192.168.x.x).
+    # Así no falla si Vite arranca en 5174 o si se abre el front por la IP del equipo.
+    _cors_origins = [r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?"]
+CORS(app, resources={r"/*": {"origins": _cors_origins}},
+     allow_headers=['Content-Type', 'Authorization'],
+     expose_headers=['Content-Disposition'])
 
 # -----------------------------------------------------------------------------
 # DECORADOR DE AUTENTICACIÓN JWT (@token_required)
@@ -74,19 +94,30 @@ def root():
             "Michelt Carolina Camargo Cobo"
         ],
         "endpoints_principales": {
-            "autenticacion": "POST /login",
+            "autenticacion": "POST /login, POST /registro",
             "crud_personas": "GET /personas, POST /personas, PUT /personas/<id>, DELETE /personas/<id>",
-            "facturacion_dian": "GET /facturas, POST /facturas, GET /facturas/<id>/pdf, POST /facturas/<id>/enviar-correo"
+            "facturacion_dian": "GET /facturas, POST /facturas, PATCH /facturas/<id>/pagar, GET /facturas/<id>/pdf, POST /facturas/<id>/enviar-correo"
         }
     }), 200
 
 # -----------------------------------------------------------------------------
 # AUTENTICACIÓN: LOGIN Y GENERACIÓN DE JWT
 # -----------------------------------------------------------------------------
+def _clave_valida(clave_guardada, clave_recibida):
+    """
+    Las cuentas creadas con /registro guardan la clave con hash (pbkdf2).
+    El usuario inicial 'profe' viene en texto plano (como en clase), así que
+    se aceptan ambos formatos.
+    """
+    if clave_guardada.startswith(('pbkdf2:', 'scrypt:')):
+        return check_password_hash(clave_guardada, clave_recibida)
+    return clave_guardada == clave_recibida
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
-    usuario = data.get('usuario')
+    usuario = (data.get('usuario') or '').strip()
     clave = data.get('clave')
 
     if not usuario or not clave:
@@ -94,11 +125,16 @@ def login():
 
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM usuarios WHERE usuario = ? AND clave = ?', (usuario, clave))
+    cursor.execute('''
+        SELECT u.*, p.nombre AS nombre
+        FROM usuarios u
+        LEFT JOIN personas p ON p.id = u.persona_id
+        WHERE u.usuario = ?
+    ''', (usuario,))
     usuario_encontrado = cursor.fetchone()
     conn.close()
 
-    if usuario_encontrado:
+    if usuario_encontrado and _clave_valida(usuario_encontrado['clave'], clave):
         # Generar token JWT con vigencia de 2 horas
         expiracion = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)
         token = jwt.encode({
@@ -112,11 +148,69 @@ def login():
             'mensaje': 'Autenticación exitosa',
             'token': token,
             'usuario': usuario_encontrado['usuario'],
+            'nombre': usuario_encontrado['nombre'],
             'rol': usuario_encontrado['rol'],
             'expira': expiracion.isoformat()
         }), 200
 
     return jsonify({'error': 'Credenciales inválidas. Verifique usuario y clave'}), 401
+
+
+# 1.1 POST /registro (Público - crea la cuenta y registra a la persona como cliente)
+_PATRON_USUARIO = re.compile(r'^[A-Za-z0-9._-]{3,30}$')
+
+
+@app.route('/registro', methods=['POST'])
+def registro():
+    data = request.get_json() or {}
+    usuario = (data.get('usuario') or '').strip()
+    clave = data.get('clave') or ''
+    persona = {campo: (data.get(campo) or '').strip()
+               for campo in ('nombre', 'cedula', 'rut', 'direccion', 'correo', 'telefono')}
+
+    # Validaciones
+    for campo in ('nombre', 'cedula', 'rut', 'direccion', 'correo'):
+        if not persona[campo]:
+            return jsonify({'error': f'El campo obligatorio "{campo}" está ausente'}), 400
+    if not _PATRON_USUARIO.match(usuario):
+        return jsonify({'error': 'El usuario debe tener entre 3 y 30 caracteres (letras, números, punto, guion o guion bajo)'}), 400
+    if len(clave) < 6:
+        return jsonify({'error': 'La clave debe tener al menos 6 caracteres'}), 400
+    if '@' not in persona['correo'] or '.' not in persona['correo'].split('@')[-1]:
+        return jsonify({'error': 'El correo electrónico no es válido'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if cursor.execute('SELECT 1 FROM usuarios WHERE usuario = ?', (usuario,)).fetchone():
+            return jsonify({'error': f'El usuario "{usuario}" ya existe, elige otro'}), 409
+        if cursor.execute('SELECT 1 FROM personas WHERE cedula = ?', (persona['cedula'],)).fetchone():
+            return jsonify({'error': 'Ya existe una persona registrada con esa cédula'}), 409
+
+        # Persona (cliente) + usuario en una sola transacción
+        cursor.execute('''
+            INSERT INTO personas (nombre, rut, cedula, direccion, correo, telefono)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (persona['nombre'], persona['rut'], persona['cedula'],
+              persona['direccion'], persona['correo'], persona['telefono']))
+        persona_id = cursor.lastrowid
+
+        cursor.execute('''
+            INSERT INTO usuarios (usuario, clave, rol, persona_id)
+            VALUES (?, ?, ?, ?)
+        ''', (usuario, generate_password_hash(clave, method='pbkdf2:sha256'), 'cliente', persona_id))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        return jsonify({'error': 'El usuario o la cédula ya están registrados'}), 409
+    finally:
+        conn.close()
+
+    return jsonify({
+        'mensaje': 'Cuenta creada exitosamente. Ya puedes iniciar sesión.',
+        'usuario': usuario,
+        'persona_id': persona_id,
+    }), 201
 
 # =============================================================================
 # RECURSO PRINCIPAL: CRUD PERSONA NATURAL
@@ -231,7 +325,7 @@ def delete_persona(persona_id):
 
 # =============================================================================
 # FUNCIONALIDAD ESPECIAL: FACTURACIÓN ELECTRÓNICA DIAN
-# Cálculo de impuestos (IVA 19%, Gravamen 4x1000), CUFE, PDF y envío de correo
+# Cálculo de impuestos (IVA 19% + 4x1000 informativo), CUFE, PDF y envío de correo
 # =============================================================================
 
 # 1. GET /facturas (Público - lista todas las facturas con datos del cliente)
@@ -296,7 +390,7 @@ def create_factura():
         conn.close()
         return jsonify({'error': f'La persona natural con ID {persona_id} no existe'}), 404
 
-    # 1. Calcular tributos DIAN (IVA 19%, 4x1000)
+    # 1. Calcular tributos: IVA 19% (total = subtotal + IVA) y 4x1000 informativo
     calculos = calcular_impuestos(subtotal_val)
 
     # 2. Asignar número consecutivo oficial DIAN
@@ -356,6 +450,35 @@ def anular_factura(factura_id):
     conn.commit()
     conn.close()
     return jsonify({'mensaje': f'Factura No. {fila["numero"]} anulada exitosamente'}), 200
+
+# 4.1 PATCH /facturas/<id>/pagar (Protegido - registra el pago de una factura)
+# Ciclo de vida: EMITIDA (pendiente de pago) -> PAGADA | EMITIDA -> ANULADA
+@app.route('/facturas/<int:factura_id>/pagar', methods=['PATCH'])
+@token_required
+def pagar_factura(factura_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    fila = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
+    if fila is None:
+        conn.close()
+        return jsonify({'error': f'Factura con ID {factura_id} no encontrada'}), 404
+
+    if fila['estado'] == 'ANULADA':
+        conn.close()
+        return jsonify({'error': f'La factura No. {fila["numero"]} está anulada y no puede pagarse'}), 409
+    if fila['estado'] == 'PAGADA':
+        conn.close()
+        return jsonify({'error': f'La factura No. {fila["numero"]} ya está pagada'}), 409
+
+    cursor.execute("UPDATE facturas SET estado = 'PAGADA' WHERE id = ?", (factura_id,))
+    conn.commit()
+    factura = cursor.execute('SELECT * FROM facturas WHERE id = ?', (factura_id,)).fetchone()
+    conn.close()
+    return jsonify({
+        'mensaje': f'Factura No. {fila["numero"]} marcada como pagada',
+        'factura': dict(factura)
+    }), 200
 
 # 5. GET /facturas/<id>/pdf (Público - descarga representación gráfica PDF)
 @app.route('/facturas/<int:factura_id>/pdf', methods=['GET'])
@@ -421,12 +544,18 @@ if __name__ == '__main__':
 
     puerto = int(os.getenv('PORT', '5000'))
 
-    import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        puerto_ocupado = (s.connect_ex(('127.0.0.1', puerto)) == 0)
+    # Con debug=True Flask reinicia el proceso (reloader). El proceso hijo hereda el
+    # puerto que ya abrió el padre, así que solo el proceso inicial verifica si está libre.
+    # (Antes el hijo veía el 5000 "ocupado" por su propio padre y mostraba 5001 por error.)
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            puerto_ocupado = (s.connect_ex(('127.0.0.1', puerto)) == 0)
 
-    if puerto_ocupado and puerto == 5000:
-        puerto = 5001
+        if puerto_ocupado and puerto == 5000:
+            puerto = 5001
+            # El hijo del reloader debe usar el mismo puerto que eligió el padre
+            os.environ['PORT'] = str(puerto)
 
     print("==============================================================")
     print("API DE FACTURACIÓN ELECTRÓNICA DIAN - GRUPO 5")

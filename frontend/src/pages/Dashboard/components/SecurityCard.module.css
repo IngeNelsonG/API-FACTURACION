@@ -1,0 +1,75 @@
+.card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 24px 26px;
+  border-radius: 22px;
+  background: linear-gradient(140deg, #f4f8fd 0%, #e6f1fb 100%);
+  border: 1px solid #dbe8f5;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  right: -60px;
+  bottom: -70px;
+  width: 240px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(124, 200, 242, 0.25);
+}
+
+.badge {
+  width: 44px;
+  color: var(--color-text);
+  margin-bottom: 14px;
+}
+
+.card h2 {
+  position: relative;
+  margin: 0 0 8px;
+  font-size: 1.12rem;
+  font-weight: 600;
+}
+
+.card p {
+  position: relative;
+  margin: 0 0 18px;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.more {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1.5px solid var(--accent-text);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--accent-text);
+  font-weight: 500;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+}
+
+.more:hover {
+  background: var(--color-primary-700);
+  color: #fff;
+}
+
+.deco {
+  position: absolute;
+  right: 6px;
+  bottom: 10px;
+  width: 92px;
+  opacity: 0.85;
+}
+
+:global(:root[data-theme='oscuro']) .card {
+  background: linear-gradient(140deg, #1c2230 0%, #1a2a3a 100%);
+  border-color: #2a3b50;
+}
