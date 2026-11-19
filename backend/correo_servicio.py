@@ -13,18 +13,19 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-# Cargar variables de entorno desde .env si existe
-_env_file = os.path.join(os.path.dirname(__file__), '.env')
-if os.path.exists(_env_file):
-    with open(_env_file, 'r', encoding='utf-8') as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if _line and not _line.startswith('#') and '=' in _line:
-                _k, _v = _line.split('=', 1)
-                _k = _k.strip()
-                _v = _v.strip().strip("'\"")
-                if _k and _k not in os.environ:
-                    os.environ[_k] = _v
+# Cargar variables de entorno desde .env si existe (backend/ o raíz del proyecto)
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+for _env_file in (os.path.join(_base_dir, '.env'), os.path.join(_base_dir, '..', '.env')):
+    if os.path.exists(_env_file):
+        with open(_env_file, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    _k = _k.strip()
+                    _v = _v.strip().strip("'\"")
+                    if _k and _k not in os.environ:
+                        os.environ[_k] = _v
 
 SMTP_HOST = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
@@ -163,6 +164,9 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
             headers={
                 "Authorization": f"Bearer {resend_api_key}",
                 "Content-Type": "application/json",
+                "Accept": "application/json",
+                # Cloudflare bloquea el User-Agent por defecto de Python-urllib (error 1010)
+                "User-Agent": "AlbaFacturacion/1.0",
             },
             method="POST",
         )
@@ -177,11 +181,16 @@ def enviar_factura_correo(destinatario: str, factura: dict, persona: dict, pdf_b
             }
         except urllib.error.HTTPError as e:
             detalle = e.read().decode('utf-8', errors='replace')
+            try:
+                detalle_json = json.loads(detalle)
+                detalle = detalle_json.get('message') or detalle
+            except ValueError:
+                pass
             return {
                 "enviado": False,
                 "modo": "error_resend",
                 "destinatario": destinatario,
-                "error": f"HTTP {e.code}: {detalle}"
+                "error": f"Resend HTTP {e.code}: {detalle}"
             }
         except Exception as e:
             return {

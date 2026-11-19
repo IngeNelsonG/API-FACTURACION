@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 os.environ['DB_NAME'] = 'test_facturacion.db'
 os.environ['SMTP_EMAIL'] = ''
 os.environ['SMTP_PASSWORD'] = ''
+os.environ['RESEND_API_KEY'] = ''
 
 from app import app
 from database import init_db
