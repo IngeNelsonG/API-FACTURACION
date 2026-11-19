@@ -18,6 +18,6 @@ COPY backend/ ./backend/
 ENV PORT=5000
 EXPOSE 5000
 
-# Arranque en producción con Gunicorn (2 workers x 4 threads, ideal para 512 MB RAM)
-CMD ["sh", "-c", "gunicorn --chdir backend --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 60 app:app"]
+# Arranque en producción con Gunicorn (inicializa tablas una sola vez con --preload)
+CMD ["sh", "-c", "gunicorn --preload --chdir backend --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 4 --timeout 60 app:app"]
 
